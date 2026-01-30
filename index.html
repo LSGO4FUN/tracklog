@@ -89,18 +89,65 @@
             to { transform: scale(1); opacity: 1; }
         }
 
-        /* Calendar Styles */
+        /* Calendar Styles Modified for iPhone Look */
         .calendar-grid {
             display: grid;
-            grid-template-columns: repeat(7, minmax(100px, 1fr));
-            gap: 1px;
-            background-color: #e2e8f0;
-            border: 1px solid #e2e8f0;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 0;
+            width: 100%; /* Ensure full width */
+            background-color: transparent;
+            border-bottom: 1px solid #e2e8f0;
         }
         .calendar-cell {
             background-color: white;
-            min-height: 100px;
-            padding: 4px;
+            min-height: 50px; /* Reduced min-height for compact view */
+            padding: 2px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        /* Selected Day Circle (iOS style) */
+        .day-number {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+            font-weight: 500;
+            margin-bottom: 2px;
+            transition: all 0.2s;
+        }
+        .calendar-cell.selected .day-number {
+            background-color: #4f46e5; /* Brand 600 */
+            color: white;
+            font-weight: bold;
+        }
+        .calendar-cell.today .day-number {
+            color: #4f46e5;
+            font-weight: bold;
+        }
+        .calendar-cell.selected.today .day-number {
+            color: white; /* Keep white if selected */
+        }
+
+        /* Dot Indicators */
+        .dots-container {
+            display: flex;
+            gap: 1.5px;
+            justify-content: center;
+            flex-wrap: wrap;
+            max-width: 100%;
+        }
+        .dot {
+            width: 5px;
+            height: 5px;
+            border-radius: 50%;
         }
         
         /* Sortable Header Styles */
@@ -113,23 +160,18 @@
             background-color: #f1f5f9;
         }
         th.sortable .sort-icon {
-            margin-left: 4px;
+            margin-left: 2px;
             color: #cbd5e1;
-            font-size: 0.8em;
+            font-size: 0.7em;
         }
         th.sortable.active .sort-icon {
             color: #4f46e5;
         }
         
-        /* Mobile Specific Tweaks */
-        @media (max-width: 640px) {
-            .calendar-grid {
-                grid-template-columns: repeat(7, minmax(40px, 1fr));
-            }
-            .calendar-cell {
-                min-height: 60px;
-                font-size: 0.75rem;
-            }
+        /* Mobile Optimized Table */
+        .compact-table th, .compact-table td {
+            padding-left: 0.25rem;
+            padding-right: 0.25rem;
         }
     </style>
 </head>
@@ -408,87 +450,75 @@
         </section>
 
         <!-- View: Configuration (Global) -->
-        <section id="view-config" class="h-full hidden fade-in overflow-y-auto p-4 bg-slate-100">
-            <div class="max-w-6xl mx-auto space-y-6">
-                <div class="flex items-center mb-2">
-                    <button onclick="app.router.back()" class="mr-3 text-slate-500 hover:text-slate-800 bg-white p-2 rounded-full shadow-sm w-10 h-10">
+        <section id="view-config" class="h-full hidden fade-in overflow-y-auto bg-slate-100">
+            <div class="max-w-6xl mx-auto space-y-4">
+                <div class="flex items-center p-4 bg-white border-b border-slate-200 sticky top-0 z-10 shadow-sm">
+                    <button onclick="app.router.back()" class="mr-3 text-slate-500 hover:text-slate-800 p-2 rounded-full w-10 h-10 flex items-center justify-center">
                         <i class="fa-solid fa-arrow-left"></i>
                     </button>
                     <h2 class="text-xl font-bold text-slate-800" data-i18n="systemSettings">System Settings</h2>
                 </div>
 
                 <!-- Config Tabs -->
-                <div class="flex space-x-4 mb-2 border-b border-slate-200">
-                    <button class="py-2 px-4 border-b-2 border-brand-600 font-bold text-brand-600 transition" id="tab-btn-mgmt" onclick="app.ui.switchConfigTab('mgmt')" data-i18n="tabMgmt">Management</button>
-                    <button class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition" id="tab-btn-cal" onclick="app.ui.switchConfigTab('cal')" data-i18n="tabCalendar">To-Do Calendar</button>
+                <div class="px-4">
+                    <div class="flex space-x-4 mb-2 border-b border-slate-200">
+                        <button class="py-2 px-4 border-b-2 border-brand-600 font-bold text-brand-600 transition" id="tab-btn-mgmt" onclick="app.ui.switchConfigTab('mgmt')" data-i18n="tabMgmt">Management</button>
+                        <button class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition" id="tab-btn-cal" onclick="app.ui.switchConfigTab('cal')" data-i18n="tabCalendar">To-Do Calendar</button>
+                    </div>
                 </div>
 
                 <!-- Tab: Management -->
-                <div id="config-content-mgmt">
+                <div id="config-content-mgmt" class="px-4 pb-10">
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5 mb-5">
                         <h2 class="text-lg font-bold text-slate-700 mb-4 border-b pb-2" data-i18n="clientMgmt">Target Management</h2>
-                        <!-- Responsive Input Form -->
-                        <div class="flex flex-col md:flex-row gap-3 mb-6">
-                            <input type="text" id="new-target-name" class="w-full md:flex-1 rounded-md border-slate-300 shadow-sm p-3 border focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" placeholder="Target" data-i18n-placeholder="targetPlaceholder">
-                            <input type="text" id="new-project-name" class="w-full md:flex-1 rounded-md border-slate-300 shadow-sm p-3 border focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" placeholder="Project" data-i18n-placeholder="projectPlaceholder">
-                            <div class="flex gap-3">
-                                <input type="number" id="new-warning-days" class="flex-1 md:w-24 rounded-md border-slate-300 shadow-sm p-3 border text-center focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" placeholder="Days" value="3" title="Warning Days">
-                                <button onclick="app.handlers.addClient()" class="flex-1 md:flex-none bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 font-medium shadow-sm whitespace-nowrap">
-                                    <i class="fa-solid fa-plus mr-1"></i> <span data-i18n="add">Add</span>
-                                </button>
+                        
+                        <!-- Stacked Input Form for Mobile -->
+                        <div class="flex flex-col gap-3 mb-4">
+                            <div class="space-y-3">
+                                <input type="text" id="new-target-name" class="w-full rounded-md border-slate-300 shadow-sm p-3 border text-base" placeholder="Target" data-i18n-placeholder="targetPlaceholder">
+                                <input type="text" id="new-project-name" class="w-full rounded-md border-slate-300 shadow-sm p-3 border text-base" placeholder="Project" data-i18n-placeholder="projectPlaceholder">
+                                <div class="flex items-center gap-2">
+                                    <span class="text-sm text-slate-500" data-i18n="colWarningDays">Days</span>
+                                    <input type="number" id="new-warning-days" class="w-24 rounded-md border-slate-300 shadow-sm p-3 border text-center text-base" placeholder="Days" value="3">
+                                </div>
                             </div>
+                            <button onclick="app.handlers.addClient()" class="w-full bg-green-600 text-white px-4 py-3 rounded-md hover:bg-green-700 font-bold shadow-sm">
+                                <i class="fa-solid fa-plus"></i> <span data-i18n="add">Add</span>
+                            </button>
                         </div>
 
-                        <!-- Mobile List View (Cards) -->
-                        <div id="client-list-mobile" class="space-y-4 md:hidden">
-                            <!-- Cards injected via JS -->
-                        </div>
-
-                        <!-- Desktop List View (Table) -->
-                        <div class="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
-                            <table class="min-w-full divide-y divide-slate-200">
+                        <!-- Compact Table for Mobile -->
+                        <div class="overflow-x-auto -mx-2 sm:mx-0">
+                            <table class="min-w-full divide-y divide-slate-200 compact-table text-xs sm:text-sm">
                                 <thead class="bg-slate-50">
                                     <tr>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase sortable" data-col="target" onclick="app.handlers.sortClients('target')">
-                                            <span data-i18n="colTarget">Target</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-target"></i>
+                                        <!-- Combined Target/Project Column -->
+                                        <th class="px-2 py-3 text-left font-medium text-slate-500 uppercase sortable w-1/3" data-col="target" onclick="app.handlers.sortClients('target')">
+                                            <span data-i18n="colTarget">Target</span>/<span data-i18n="colProject">Prj</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-target"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase sortable" data-col="project" onclick="app.handlers.sortClients('project')">
-                                            <span data-i18n="colProject">Project</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-project"></i>
+                                        <th class="px-1 py-3 text-center font-medium text-slate-500 uppercase sortable" data-col="warningDays" onclick="app.handlers.sortClients('warningDays')">
+                                            <span>Days</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-warningDays"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase sortable" data-col="warningDays" onclick="app.handlers.sortClients('warningDays')">
-                                            <span data-i18n="colWarningDays">Days (Set)</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-warningDays"></i>
+                                        <th class="px-1 py-3 text-center font-bold text-red-500 uppercase sortable" data-col="overdue" onclick="app.handlers.sortClients('overdue')">
+                                            <span>OD</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-overdue"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-red-500 uppercase font-bold sortable" data-col="overdue" onclick="app.handlers.sortClients('overdue')">
-                                            <span data-i18n="colOverdue">Overdue</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-overdue"></i>
+                                        <th class="px-1 py-3 text-center font-bold text-yellow-600 uppercase sortable" data-col="upcoming" onclick="app.handlers.sortClients('upcoming')">
+                                            <span>Upc</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-upcoming"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-yellow-600 uppercase font-bold sortable" data-col="upcoming" onclick="app.handlers.sortClients('upcoming')">
-                                            <span data-i18n="colUpcoming">Upcoming</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-upcoming"></i>
+                                        <th class="px-1 py-3 text-center font-medium text-slate-500 uppercase sortable" data-col="total" onclick="app.handlers.sortClients('total')">
+                                            <span>Tot</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-total"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase sortable" data-col="total" onclick="app.handlers.sortClients('total')">
-                                            <span data-i18n="colTotal">Total</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-total"></i>
+                                        <th class="px-1 py-3 text-center font-medium text-green-600 uppercase sortable" data-col="done" onclick="app.handlers.sortClients('done')">
+                                            <span>Ok</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-done"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-green-600 uppercase sortable" data-col="done" onclick="app.handlers.sortClients('done')">
-                                            <span data-i18n="colDone">Done</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-done"></i>
+                                        <th class="px-1 py-3 text-center font-medium text-blue-600 uppercase sortable" data-col="rate" onclick="app.handlers.sortClients('rate')">
+                                            <span>%</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-rate"></i>
                                         </th>
-                                        <th class="px-4 py-3 text-center text-xs font-medium text-blue-600 uppercase sortable" data-col="rate" onclick="app.handlers.sortClients('rate')">
-                                            <span data-i18n="colRate">Rate</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-rate"></i>
-                                        </th>
-                                        <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase" data-i18n="colAction">Action</th>
+                                        <th class="px-1 py-3 text-right font-medium text-slate-500 uppercase">Act</th>
                                     </tr>
                                 </thead>
                                 <tbody id="client-list-tbody" class="bg-white divide-y divide-slate-200"></tbody>
                             </table>
-                        </div>
-                        
-                        <!-- Mobile Sort Selector -->
-                        <div class="md:hidden mt-4 flex items-center justify-end">
-                            <label class="text-xs text-slate-500 mr-2"><i class="fa-solid fa-sort mr-1"></i>Sort:</label>
-                            <select class="text-sm border-none bg-transparent font-medium text-brand-600 focus:ring-0" onchange="app.handlers.sortClients(this.value)">
-                                <option value="target">Target Name</option>
-                                <option value="project">Project Name</option>
-                                <option value="overdue">Overdue Count</option>
-                                <option value="rate">Completion Rate</option>
-                            </select>
                         </div>
                     </div>
 
@@ -502,44 +532,37 @@
                 </div>
 
                 <!-- Tab: Calendar -->
-                <div id="config-content-cal" class="hidden">
-                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+                <div id="config-content-cal" class="hidden min-h-screen pb-10">
+                    <div class="bg-white shadow-sm border-b border-slate-200 sticky top-0 z-20">
                         <!-- Cal Filters & View Switch -->
-                        <div class="flex flex-col md:flex-row gap-3 mb-4 items-center justify-between">
-                            <div class="flex gap-2 items-center w-full md:w-auto">
-                                <button onclick="app.handlers.changeCalDate(-1)" class="p-2 text-slate-500 hover:text-brand-600"><i class="fa-solid fa-chevron-left"></i></button>
-                                <h3 id="cal-title" class="text-lg font-bold text-slate-800 w-48 text-center"></h3>
-                                <button onclick="app.handlers.changeCalDate(1)" class="p-2 text-slate-500 hover:text-brand-600"><i class="fa-solid fa-chevron-right"></i></button>
+                        <div class="flex flex-col p-4 bg-white border-b border-slate-100">
+                            <div class="flex justify-between items-center mb-2">
+                                <button onclick="app.handlers.changeCalDate(-1)" class="p-2 text-brand-600 hover:bg-slate-50 rounded-full"><i class="fa-solid fa-chevron-left"></i></button>
+                                <h3 id="cal-title" class="text-lg font-bold text-slate-800"></h3>
+                                <button onclick="app.handlers.changeCalDate(1)" class="p-2 text-brand-600 hover:bg-slate-50 rounded-full"><i class="fa-solid fa-chevron-right"></i></button>
                             </div>
-                            <div class="flex gap-2 w-full md:w-auto items-center">
-                                <div class="flex rounded-md shadow-sm border border-slate-300 overflow-hidden">
-                                    <button onclick="app.handlers.switchCalMode('biweek')" id="btn-view-biweek" class="px-3 py-1.5 text-sm bg-brand-50 text-brand-700 font-medium">3 Weeks</button>
-                                    <button onclick="app.handlers.switchCalMode('month')" id="btn-view-month" class="px-3 py-1.5 text-sm bg-white text-slate-600 hover:bg-slate-50 border-l border-slate-300">Monthly</button>
+                            <div class="flex gap-2">
+                                <div class="flex rounded-md shadow-sm border border-slate-300 overflow-hidden shrink-0">
+                                    <button onclick="app.handlers.switchCalMode('biweek')" id="btn-view-biweek" class="px-3 py-1.5 text-xs bg-brand-50 text-brand-700 font-medium whitespace-nowrap">3 Weeks</button>
+                                    <button onclick="app.handlers.switchCalMode('month')" id="btn-view-month" class="px-3 py-1.5 text-xs bg-white text-slate-600 hover:bg-slate-50 border-l border-slate-300 whitespace-nowrap">Monthly</button>
                                 </div>
-                                <select id="cal-filter-target" class="rounded border-slate-300 text-sm p-1.5 flex-1" onchange="app.ui.renderCalendar()"></select>
-                                <select id="cal-filter-project" class="rounded border-slate-300 text-sm p-1.5 flex-1" onchange="app.ui.renderCalendar()"></select>
+                                <select id="cal-filter-target" class="rounded border-slate-300 text-xs p-1.5 flex-1 min-w-0" onchange="app.ui.renderCalendar()"></select>
+                                <select id="cal-filter-project" class="rounded border-slate-300 text-xs p-1.5 flex-1 min-w-0" onchange="app.ui.renderCalendar()"></select>
                             </div>
                         </div>
 
-                        <!-- Legend -->
-                        <div class="flex flex-wrap gap-3 mb-4 text-xs justify-center border-b border-slate-100 pb-3">
-                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-100 border border-red-500 mr-1"></span> <span data-i18n="urgencyCritical">Critical</span></div>
-                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-orange-100 border border-orange-500 mr-1"></span> <span data-i18n="urgencyHigh">High</span></div>
-                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-100 border border-yellow-500 mr-1"></span> <span data-i18n="urgencyMedium">Medium</span></div>
-                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-100 border border-blue-500 mr-1"></span> <span data-i18n="urgencyLow">Low</span></div>
-                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-slate-100 border border-slate-500 mr-1"></span> <span data-i18n="urgencyRef">Ref</span></div>
-                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-600 border border-red-800 mr-1"></span> <span data-i18n="overdueTag">Overdue</span></div>
+                        <!-- Grid Header -->
+                        <div class="grid grid-cols-7 text-center bg-slate-50 border-b border-slate-200" id="calendar-header">
+                            <!-- Headers generated by JS -->
                         </div>
+                        
+                        <!-- Calendar Grid -->
+                        <div id="calendar-grid" class="calendar-grid bg-white"></div>
+                    </div>
 
-                        <!-- Grid -->
-                        <div class="overflow-x-auto">
-                            <div class="min-w-[700px]"> <!-- Ensure horizontal scroll on small mobile -->
-                                <div class="grid grid-cols-7 text-center mb-1" id="calendar-header">
-                                    <!-- Headers generated by JS -->
-                                </div>
-                                <div id="calendar-grid" class="calendar-grid"></div>
-                            </div>
-                        </div>
+                    <!-- Selected Day Detail List -->
+                    <div id="calendar-day-detail" class="max-w-3xl mx-auto p-4 space-y-3">
+                        <!-- Content generated by JS -->
                     </div>
                 </div>
             </div>
@@ -586,8 +609,9 @@
                 lastView: 'landing', 
                 lang: 'zh', 
                 calDate: new Date(), 
-                calMode: 'biweek',
-                clientSort: { column: 'target', order: 'asc' } // Added for sorting
+                calMode: 'month', // Default to month for better view
+                selectedDate: new Date(), // Track selected date
+                clientSort: { column: 'target', order: 'asc' } 
             },
             data: { clients: [], issues: [], settings: { quickDates: [] }, history: [] },
             
@@ -596,13 +620,15 @@
                     appTitle: "Issue Log Monitor", loginTitle: "Project Login", loginDesc: "Select target and project to access", loginPlaceholder: "Target Name", enterProject: "Enter Project", loginFooter: "To add a target, click the Settings icon above", exit: "Exit", overdueTitle: "Overdue", upcomingTitle: "Upcoming", filters: "Filters", advanced: "Advanced", daysLabel: "Days", urgencyAll: "Urgency (All)", urgencyCritical: "Critical", urgencyHigh: "High", urgencyMedium: "Medium", urgencyLow: "Low", urgencyRef: "Ref", statusIncomplete: "Incomplete", statusCompleted: "Completed", statusAll: "All Status", originator: "Originator", assignee: "Assignee", all: "All", sortBy: "Sort By", sortDue: "Due Date", sortUrgency: "Urgency", sortOriginator: "Originator", sortAssignee: "Assignee", sortStatus: "Status", addIssue: "Add Issue", clientName: "Target Name", issueTitle: "Issue Title", summaryPlaceholder: "Enter summary...", tagNamePlaceholder: "Type or select name", startTime: "Start Time", dueTime: "Due Time", urgency: "Urgency", completed: "Completed", notes: "Notes", images: "Images", upload: "Upload", cancel: "Cancel", save: "Save", historyTitle: "Operation History", tabList: "List", tabAdd: "Add", tabHistory: "History", systemSettings: "System Settings", clientMgmt: "Target Management", newClientPlaceholder: "Target", add: "Add", colName: "Name", colOverdue: "Overdue", colUpcoming: "Upcoming", colTotal: "Total", colDone: "Done", colRate: "Rate", colAction: "Action", colWarningDays: "Days (Set)", quickDateSettings: "Quick Date Buttons", addButton: "Add Button", confirm: "Confirm", issueDetail: "Issue Detail", edit: "Edit", close: "Close", editBtn: "Edit", delBtn: "Del", sysPrompt: "System Prompt", overdueText: "{n} items overdue", upcomingText: "{n} items upcoming", noHistory: "No History", noIssues: "No issues found", saved: "Saved successfully", clientNotFound: "Target not found: \"{n}\"\nPlease check name or add in settings.", clientAdded: "Target added successfully", renameTitle: "Rename Target", renameMsg: "Enter new name", renameSuccess: "Renamed successfully, updated {n} issues", delTitle: "Confirm Delete", delMsg: "Delete target <b>{n}</b> and ALL related data?<br>Please type target name to confirm:", delSuccess: "Target {n} deleted", imgError: "Image processing failed", importSuccess: "Data imported successfully", importError: "Invalid format", readError: "Read failed", itemsOverdue: "items overdue", pleaseSetStart: "Please set Start Time first", confirmCompleteTitle: "Confirm Completion", confirmCompleteMsg: "Are you sure you want to mark this issue as Completed?", confirmDeleteIssueTitle: "Delete Issue", confirmDeleteIssueMsg: "Are you sure you want to delete this issue?", issueDeleted: "Issue deleted successfully", overdueTag: "Overdue", dateError: "Due Time cannot be earlier than Start Time.", logCreated: "Created", logModified: "Modified", logStatusChange: "Status Change", logDeleted: "Deleted", fieldTitle: "Title", fieldOriginator: "Originator", fieldStartTime: "Start Time", fieldDueTime: "Due Time", fieldAssignee: "Assignee", fieldUrgency: "Urgency", fieldCompleted: "Status", valNotesUpdated: "Notes updated", valImagesUpdated: "Images updated", colTarget: "Target", colProject: "Project", targetPlaceholder: "Target", projectPlaceholder: "Project", targetLabel: "Target", projectLabel: "Project", renameTargetTitle: "Rename Target", renameTargetMsg: "New Target Name:", renameProjectTitle: "Rename Project", renameProjectMsg: "New Project Name:", editClientTitle: "Edit Target Info", editTargetMsg: "Target Name:", editProjectMsg: "Project Name:", editDaysMsg: "Warning Days:", sameNameError: "Name already exists", tabMgmt: "Management", tabCalendar: "To-Do Calendar", viewBiWeek: "3 Weeks", viewMonth: "Monthly",
                     nameTooLongTarget: "Target name is too long (Limit: ~10 Chinese or 20 English chars)", nameTooLongProject: "Project name is too long (Limit: ~20 Chinese or 40 English chars)",
                     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-                    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
+                    noEvents: "No events for this day"
                 },
                 zh: {
                     appTitle: "Issue Log Monitor", loginTitle: "專案登入", loginDesc: "請輸入專案對象並選擇專案", loginPlaceholder: "專案對象名稱", enterProject: "進入專案", loginFooter: "如需新增對象，請點擊上方設定圖示", exit: "離開", overdueTitle: "逾期警報", upcomingTitle: "即將到期警報", filters: "篩選條件", advanced: "進階", daysLabel: "天數", urgencyAll: "急迫性 (全部)", urgencyCritical: "極高", urgencyHigh: "高", urgencyMedium: "中", urgencyLow: "低", urgencyRef: "參考", statusIncomplete: "未完工", statusCompleted: "已完工", statusAll: "全部狀態", originator: "發起人", assignee: "指派人", all: "全部", sortBy: "排序", sortDue: "期限", sortUrgency: "急迫性", sortOriginator: "發起人", sortAssignee: "指派人", sortStatus: "狀態", addIssue: "新增議題", clientName: "專案對象", issueTitle: "議題名稱", summaryPlaceholder: "輸入摘要...", tagNamePlaceholder: "輸入名字或選擇...", startTime: "提出時間", dueTime: "完成時間", urgency: "急迫性", completed: "已完工", notes: "補充資訊", images: "補充圖片", upload: "上傳圖片", cancel: "取消", save: "儲存", historyTitle: "操作紀錄", tabList: "列表", tabAdd: "新增", tabHistory: "紀錄", systemSettings: "系統設定", clientMgmt: "專案對象維護", newClientPlaceholder: "對象", add: "新增", colName: "名稱", colOverdue: "逾期", colUpcoming: "即將到期", colTotal: "議題", colDone: "完工", colRate: "達成率", colAction: "操作", colWarningDays: "預警天數", quickDateSettings: "快速完成日設定", addButton: "新增按鈕", confirm: "確認", issueDetail: "議題詳情", edit: "修改", close: "關閉", editBtn: "修改", delBtn: "刪除", sysPrompt: "系統提示", overdueText: "{n} 個議題逾期未完工", upcomingText: "{n} 個議題即將到期", noHistory: "此對象尚無紀錄", noIssues: "無相關議題", saved: "儲存成功", clientNotFound: "找不到對象：「{n}」\n請確認名稱或至設定頁面新增。", clientAdded: "對象新增成功", renameTitle: "修改對象名稱", renameMsg: "請輸入新名稱", renameSuccess: "更名成功，共更新 {n} 筆議題", delTitle: "刪除確認", delMsg: "刪除對象 <b>{n}</b> 將一併刪除其所有資料。<br>請輸入對象名稱確認：", delSuccess: "已刪除對象 {n}", imgError: "圖片處理失敗", importSuccess: "資料匯入成功", importError: "格式錯誤", readError: "讀取失敗", itemsOverdue: "個議題逾期", pleaseSetStart: "請先設定提出時間", confirmCompleteTitle: "完工確認", confirmCompleteMsg: "您確定要將此議題標記為已完工嗎？", confirmDeleteIssueTitle: "刪除議題", confirmDeleteIssueMsg: "您確定要刪除此議題嗎？", issueDeleted: "議題已刪除", overdueTag: "已逾期", dateError: "完成時間不能早於提出時間。", logCreated: "新增議題", logModified: "修改議題", logStatusChange: "狀態變更", logDeleted: "刪除議題", fieldTitle: "議題名稱", fieldOriginator: "發起人", fieldStartTime: "提出時間", fieldDueTime: "完成時間", fieldAssignee: "指派人", fieldUrgency: "急迫性", fieldCompleted: "狀態", valNotesUpdated: "變更補充資訊", valImagesUpdated: "變更補充圖片", colTarget: "對象", colProject: "專案", targetPlaceholder: "對象", projectPlaceholder: "專案", targetLabel: "對象", projectLabel: "專案", renameTargetTitle: "修改對象", renameTargetMsg: "新對象名稱:", renameProjectTitle: "修改專案", renameProjectMsg: "新專案名稱:", editClientTitle: "修改專案對象", editTargetMsg: "對象名稱:", editProjectMsg: "專案名稱:", editDaysMsg: "預警天數:", sameNameError: "該組合已存在", tabMgmt: "管理", tabCalendar: "代辦行事曆", viewBiWeek: "三週", viewMonth: "月曆",
                     nameTooLongTarget: "對象名稱太長 (限制: ~10中文字或20英文字)", nameTooLongProject: "專案名稱太長 (限制: ~20中文字或40英文字)",
                     months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
-                    weekdays: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"]
+                    weekdays: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
+                    noEvents: "此日無待辦事項"
                 }
             },
             
@@ -1138,11 +1164,11 @@
                     const btnBi = document.getElementById('btn-view-biweek');
                     const btnMo = document.getElementById('btn-view-month');
                     if(mode === 'biweek') {
-                        btnBi.className = "px-3 py-1.5 text-sm bg-brand-50 text-brand-700 font-medium";
-                        btnMo.className = "px-3 py-1.5 text-sm bg-white text-slate-600 hover:bg-slate-50 border-l border-slate-300";
+                        btnBi.className = "px-3 py-1.5 text-xs bg-brand-50 text-brand-700 font-medium whitespace-nowrap";
+                        btnMo.className = "px-3 py-1.5 text-xs bg-white text-slate-600 hover:bg-slate-50 border-l border-slate-300 whitespace-nowrap";
                     } else {
-                        btnBi.className = "px-3 py-1.5 text-sm bg-white text-slate-600 hover:bg-slate-50";
-                        btnMo.className = "px-3 py-1.5 text-sm bg-brand-50 text-brand-700 font-medium border-l border-slate-300";
+                        btnBi.className = "px-3 py-1.5 text-xs bg-white text-slate-600 hover:bg-slate-50 whitespace-nowrap";
+                        btnMo.className = "px-3 py-1.5 text-xs bg-brand-50 text-brand-700 font-medium border-l border-slate-300 whitespace-nowrap";
                     }
                     app.ui.renderCalendar();
                 }
@@ -1279,6 +1305,7 @@
 
                     if(tab === 'cal') {
                         app.ui.renderCalendarFilters();
+                        app.state.selectedDate = new Date(); // Reset selection to today when opening
                         app.ui.renderCalendar();
                     }
                 },
@@ -1312,6 +1339,7 @@
                 renderCalendar: function() {
                     const date = app.state.calDate;
                     const mode = app.state.calMode;
+                    const selectedDate = app.state.selectedDate;
                     const tFilter = document.getElementById('cal-filter-target').value;
                     const pFilter = document.getElementById('cal-filter-project').value;
                     app.state.calendarFilter = { target: tFilter, project: pFilter };
@@ -1321,7 +1349,7 @@
                     const weekDays = app.i18n[app.state.lang].weekdays;
                     header.innerHTML = '';
                     weekDays.forEach(day => {
-                        header.innerHTML += `<div class="text-xs font-bold text-slate-500 py-1">${day}</div>`;
+                        header.innerHTML += `<div class="text-xs font-bold text-slate-500 py-2">${day}</div>`;
                     });
 
                     const activeIssues = app.data.issues.filter(i => !i.completed && i.dueTime);
@@ -1338,9 +1366,10 @@
                         daysToRender = lastDay.getDate();
                         const startingDay = firstDayDate.getDay(); 
 
+                        // Empty cells for previous month
                         for(let i = 0; i < startingDay; i++) {
                             const cell = document.createElement('div');
-                            cell.className = "calendar-cell bg-slate-50";
+                            cell.className = "calendar-cell border-b border-transparent"; // Empty cell style
                             grid.appendChild(cell);
                         }
                     } else {
@@ -1368,17 +1397,33 @@
                     for(let d = 0; d < daysToRender; d++) {
                         const currDate = new Date(firstDayDate);
                         currDate.setDate(firstDayDate.getDate() + d);
+                        const currentDayStr = `${currDate.getFullYear()}-${String(currDate.getMonth()+1).padStart(2,'0')}-${String(currDate.getDate()).padStart(2,'0')}`;
+
+                        // Check selection match
+                        const isSelected = selectedDate && 
+                            currDate.getDate() === selectedDate.getDate() && 
+                            currDate.getMonth() === selectedDate.getMonth() && 
+                            currDate.getFullYear() === selectedDate.getFullYear();
+                        
+                        // Check today match
+                        const isToday = currDate.toDateString() === new Date().toDateString();
 
                         const cell = document.createElement('div');
-                        cell.className = "calendar-cell border-t border-l border-slate-100 hover:bg-slate-50 transition overflow-y-auto";
-                        if (currDate.toDateString() === new Date().toDateString()) cell.classList.add("bg-blue-50");
+                        cell.className = `calendar-cell ${isSelected ? 'selected' : ''} ${isToday ? 'today' : ''}`;
+                        cell.onclick = () => {
+                            app.state.selectedDate = new Date(currDate);
+                            app.ui.renderCalendar(); // Re-render grid to update selection UI
+                        };
 
+                        // Date Number
                         const dateNum = document.createElement('div');
-                        dateNum.className = "text-xs font-bold text-slate-400 mb-1 text-right";
+                        dateNum.className = "day-number";
                         dateNum.innerText = currDate.getDate();
                         cell.appendChild(dateNum);
 
-                        const currentDayStr = `${currDate.getFullYear()}-${String(currDate.getMonth()+1).padStart(2,'0')}-${String(currDate.getDate()).padStart(2,'0')}`;
+                        // Dots Container
+                        const dotsContainer = document.createElement('div');
+                        dotsContainer.className = "dots-container";
                         
                         const daysIssues = activeIssues.filter(i => {
                             const clientInfo = app.data.clients.find(c => c.id === i.client);
@@ -1388,30 +1433,120 @@
                             return i.dueTime.startsWith(currentDayStr);
                         });
 
-                        daysIssues.forEach(issue => {
-                            const clientInfo = app.data.clients.find(c => c.id === issue.client);
-                            const label = `[${clientInfo ? clientInfo.target : '?'}-${clientInfo ? clientInfo.project : '?'}] ${issue.title}`;
-                            const chip = document.createElement('div');
+                        // Limit dots to avoid overflow
+                        const maxDots = 5;
+                        daysIssues.slice(0, maxDots).forEach(issue => {
+                            const dot = document.createElement('div');
+                            dot.className = "dot";
                             
                             const isOverdue = app.utils.isOverdue(issue.dueTime, issue.completed);
-                            let bgClass = "bg-slate-200 text-slate-700";
-                            if (isOverdue) bgClass = "bg-red-600 text-white border-l-2 border-red-800 shadow-sm"; 
-                            else if(issue.urgency === 'critical') bgClass = "bg-red-100 text-red-800 border-l-2 border-red-600";
-                            else if(issue.urgency === 'high') bgClass = "bg-orange-100 text-orange-800 border-l-2 border-orange-500";
-                            else if(issue.urgency === 'medium') bgClass = "bg-yellow-100 text-yellow-800 border-l-2 border-yellow-500";
-                            else if(issue.urgency === 'low') bgClass = "bg-blue-100 text-blue-800 border-l-2 border-blue-500";
+                            if (isOverdue) dot.classList.add('bg-red-600');
+                            else if(issue.urgency === 'critical') dot.classList.add('bg-red-500');
+                            else if(issue.urgency === 'high') dot.classList.add('bg-orange-500');
+                            else if(issue.urgency === 'medium') dot.classList.add('bg-yellow-500');
+                            else if(issue.urgency === 'low') dot.classList.add('bg-blue-500');
+                            else dot.classList.add('bg-slate-400');
                             
-                            chip.className = `text-[10px] p-1 mb-1 rounded leading-tight cursor-pointer hover:opacity-80 break-words whitespace-normal ${bgClass}`;
-                            chip.title = label; 
-                            chip.innerText = label;
-                            chip.onclick = (e) => {
-                                e.stopPropagation();
-                                app.ui.showIssueDetail(issue.id);
-                            };
-                            cell.appendChild(chip);
+                            dotsContainer.appendChild(dot);
                         });
+                        
+                        // If more issues than dots, add a plus icon small
+                        if(daysIssues.length > maxDots) {
+                             const plus = document.createElement('div');
+                             plus.className = "text-[8px] text-slate-400 leading-none self-center ml-0.5";
+                             plus.innerText = "+";
+                             dotsContainer.appendChild(plus);
+                        }
+
+                        cell.appendChild(dotsContainer);
                         grid.appendChild(cell);
                     }
+                    
+                    // Render Detail List for Selected Date
+                    app.ui.renderCalendarDetail(selectedDate, activeIssues, tFilter, pFilter);
+                },
+                renderCalendarDetail: function(date, allActiveIssues, tFilter, pFilter) {
+                    const container = document.getElementById('calendar-day-detail');
+                    container.innerHTML = '';
+                    
+                    if(!date) return;
+                    
+                    const dayStr = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+                    
+                    // Header for the list section
+                    const dateHeader = document.createElement('div');
+                    dateHeader.className = "bg-slate-100 px-4 py-2 text-sm font-bold text-slate-600 rounded mb-2 sticky top-0";
+                    const weekday = app.i18n[app.state.lang].weekdays[date.getDay()];
+                    dateHeader.innerText = app.state.lang === 'zh' ? 
+                        `${date.getMonth()+1}月${date.getDate()}日 ${weekday}` : 
+                        `${weekday}, ${app.i18n[app.state.lang].months[date.getMonth()]} ${date.getDate()}`;
+                    container.appendChild(dateHeader);
+
+                    const issues = allActiveIssues.filter(i => {
+                        const clientInfo = app.data.clients.find(c => c.id === i.client);
+                        if(!clientInfo) return false;
+                        if(tFilter !== 'all' && clientInfo.target !== tFilter) return false;
+                        if(pFilter !== 'all' && clientInfo.project !== pFilter) return false;
+                        return i.dueTime.startsWith(dayStr);
+                    });
+
+                    if(issues.length === 0) {
+                        container.innerHTML += `<div class="text-center text-slate-400 py-6 text-sm">${app.t('noEvents')}</div>`;
+                        return;
+                    }
+
+                    issues.sort((a,b) => new Date(a.dueTime) - new Date(b.dueTime));
+
+                    issues.forEach(i => {
+                        const clientInfo = app.data.clients.find(c => c.id === i.client);
+                        const timeStr = new Date(i.dueTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit', hour12: false});
+                        
+                        const isOverdue = app.utils.isOverdue(i.dueTime, i.completed);
+                        let borderClass = "border-l-4 border-slate-300";
+                        let urgencyLabel = "";
+                        
+                         if (isOverdue) {
+                             borderClass = "border-l-4 border-red-600";
+                             urgencyLabel = `<span class="text-xs font-bold text-red-600 border border-red-200 bg-red-50 px-1 rounded ml-2">OVERDUE</span>`;
+                         }
+                        else if(i.urgency === 'critical') {
+                            borderClass = "border-l-4 border-red-500";
+                            urgencyLabel = `<span class="text-[10px] font-bold text-red-600 bg-red-50 px-1 rounded ml-2 border border-red-100">${app.t('urgencyCritical')}</span>`;
+                        }
+                        else if(i.urgency === 'high') {
+                            borderClass = "border-l-4 border-orange-500";
+                            urgencyLabel = `<span class="text-[10px] font-bold text-orange-600 bg-orange-50 px-1 rounded ml-2 border border-orange-100">${app.t('urgencyHigh')}</span>`;
+                        }
+                        else if(i.urgency === 'medium') {
+                            borderClass = "border-l-4 border-yellow-500";
+                            urgencyLabel = `<span class="text-[10px] font-bold text-yellow-600 bg-yellow-50 px-1 rounded ml-2 border border-yellow-100">${app.t('urgencyMedium')}</span>`;
+                        }
+                        else if(i.urgency === 'low') {
+                            borderClass = "border-l-4 border-blue-500";
+                            urgencyLabel = `<span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-1 rounded ml-2 border border-blue-100">${app.t('urgencyLow')}</span>`;
+                        }
+
+                        const item = document.createElement('div');
+                        item.className = `bg-white p-3 rounded shadow-sm border border-slate-200 flex items-center ${borderClass} cursor-pointer hover:bg-slate-50 transition`;
+                        item.onclick = () => app.ui.showIssueDetail(i.id);
+                        
+                        item.innerHTML = `
+                            <div class="flex flex-col w-14 text-right pr-2 border-r border-slate-100 mr-3 shrink-0">
+                                <span class="text-xs font-bold text-slate-700">${timeStr}</span>
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <div class="text-xs text-slate-500 truncate mb-0.5">${clientInfo ? clientInfo.target : '?'} - ${clientInfo ? clientInfo.project : '?'}</div>
+                                <div class="flex items-center">
+                                    <div class="font-bold text-slate-800 text-sm truncate flex-1">${i.title}</div>
+                                    ${urgencyLabel}
+                                </div>
+                            </div>
+                            <div class="ml-2">
+                                <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+                            </div>
+                        `;
+                        container.appendChild(item);
+                    });
                 },
                 renderOverdueAlert: function(c) {
                     const el = document.getElementById('overdue-alert-container');
@@ -1522,12 +1657,7 @@
                     c.appendChild(d);
                 },
                 renderClientList: function() {
-                    const tb = document.getElementById('client-list-tbody'); 
-                    const mobileContainer = document.getElementById('client-list-mobile');
-                    
-                    tb.innerHTML = '';
-                    mobileContainer.innerHTML = '';
-                    
+                    const tb = document.getElementById('client-list-tbody'); tb.innerHTML='';
                     if(!app.data.clients) return;
                     
                     // 1. Prepare data with statistics first
@@ -1564,7 +1694,7 @@
                         
                         switch(column) {
                             case 'target': valA = a.target.toLowerCase(); valB = b.target.toLowerCase(); break;
-                            case 'project': valA = a.project.toLowerCase(); valB = b.project.toLowerCase(); break;
+                            case 'project': valA = a.project.toLowerCase(); valB = b.project.toLowerCase(); break; // Although visually merged, sort logic remains for 'project' col if clicked somehow, or default sorts
                             case 'warningDays': valA = parseInt(a.warningDays || 0); valB = parseInt(b.warningDays || 0); break;
                             case 'overdue': valA = a.stats.od; valB = b.stats.od; break;
                             case 'upcoming': valA = a.stats.upcoming; valB = b.stats.upcoming; break;
@@ -1581,7 +1711,7 @@
                         return a.target.localeCompare(b.target);
                     });
 
-                    // 3. Update Header Icons (Desktop)
+                    // 3. Update Header Icons
                     document.querySelectorAll('th.sortable').forEach(th => {
                         th.classList.remove('active', 'bg-slate-100');
                         const icon = th.querySelector('.sort-icon');
@@ -1595,64 +1725,39 @@
                         icon.className = order === 'asc' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
                     }
 
-                    // 4. Render Rows (Desktop) & Cards (Mobile)
+                    // 4. Render Rows (Compact for Mobile)
                     clientData.forEach(c => {
                         let rc = 'text-red-500'; if(c.stats.rate>=50) rc='text-yellow-500'; if(c.stats.rate>=80) rc='text-green-500';
+                        
                         const safeId = c.id.replace(/'/g, "\\'");
                         
-                        // Desktop Table Row
                         tb.innerHTML += `<tr>
-                            <td class="px-4 py-3 text-sm font-medium text-slate-900">
-                                <div class="break-words whitespace-normal leading-tight">${c.target}</div>
+                            <td class="px-2 py-3 text-sm font-medium text-slate-900 border-b border-slate-100">
+                                <div class="flex flex-col">
+                                    <span class="font-bold text-brand-700 leading-tight">${c.target}</span>
+                                    <span class="text-xs text-slate-500 leading-tight mt-0.5">${c.project}</span>
+                                </div>
                             </td>
-                            <td class="px-4 py-3 text-sm text-slate-500">
-                                <div class="break-words whitespace-normal leading-tight">${c.project}</div>
-                            </td>
-                            <td class="px-4 py-3 text-center text-sm font-medium text-slate-500">${c.warningDays}</td>
-                            <td class="px-4 py-3 text-center text-sm font-bold text-red-600">${c.stats.od>0?c.stats.od:'-'}</td>
-                            <td class="px-4 py-3 text-center text-sm font-bold text-yellow-600">${c.stats.upcoming>0?c.stats.upcoming:'-'}</td>
-                            <td class="px-4 py-3 text-center text-sm text-slate-500">${c.stats.all}</td>
-                            <td class="px-4 py-3 text-center text-sm text-green-600">${c.stats.comp}</td>
-                            <td class="px-4 py-3 text-center text-sm font-bold ${rc}">${c.stats.rate}%</td>
-                            <td class="px-4 py-3 text-right">
-                                <button onclick="app.handlers.editClientInfo('${safeId}')" class="text-blue-600 text-sm hover:underline mr-2">${app.t('editBtn')}</button>
-                                <button onclick="app.handlers.deleteClient('${safeId}')" class="text-red-600 text-sm hover:underline">${app.t('delBtn')}</button>
+                            <!-- Warning Days -->
+                            <td class="px-1 py-3 text-center text-xs font-medium text-slate-500 border-b border-slate-100">${c.warningDays}</td>
+                            <!-- Overdue -->
+                            <td class="px-1 py-3 text-center text-xs font-bold text-red-600 border-b border-slate-100">${c.stats.od>0?c.stats.od:'-'}</td>
+                            <!-- Upcoming -->
+                            <td class="px-1 py-3 text-center text-xs font-bold text-yellow-600 border-b border-slate-100">${c.stats.upcoming>0?c.stats.upcoming:'-'}</td>
+                            <!-- Total -->
+                            <td class="px-1 py-3 text-center text-xs text-slate-500 border-b border-slate-100">${c.stats.all}</td>
+                            <!-- Done -->
+                            <td class="px-1 py-3 text-center text-xs text-green-600 border-b border-slate-100">${c.stats.comp}</td>
+                            <!-- Rate -->
+                            <td class="px-1 py-3 text-center text-xs font-bold ${rc} border-b border-slate-100">${c.stats.rate}%</td>
+                            <!-- Action -->
+                            <td class="px-1 py-3 text-right border-b border-slate-100">
+                                <div class="flex flex-col items-end gap-1">
+                                    <button onclick="app.handlers.editClientInfo('${safeId}')" class="text-blue-600 text-xs hover:underline bg-blue-50 px-1.5 py-0.5 rounded border border-blue-100">${app.t('editBtn')}</button>
+                                    <button onclick="app.handlers.deleteClient('${safeId}')" class="text-red-600 text-xs hover:underline bg-red-50 px-1.5 py-0.5 rounded border border-red-100">${app.t('delBtn')}</button>
+                                </div>
                             </td>
                         </tr>`;
-
-                        // Mobile Card
-                        mobileContainer.innerHTML += `
-                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
-                                <div class="flex justify-between items-start mb-3">
-                                    <div class="flex-1 mr-2">
-                                        <div class="font-bold text-slate-800 text-lg leading-tight mb-1">${c.target}</div>
-                                        <div class="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded inline-block">${c.project}</div>
-                                    </div>
-                                    <div class="flex space-x-3 text-sm">
-                                        <button onclick="app.handlers.editClientInfo('${safeId}')" class="text-blue-600"><i class="fa-solid fa-pen"></i></button>
-                                        <button onclick="app.handlers.deleteClient('${safeId}')" class="text-red-600"><i class="fa-solid fa-trash"></i></button>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-3 gap-2 text-center bg-slate-50 p-2 rounded-lg border border-slate-100">
-                                    <div class="flex flex-col items-center">
-                                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">${app.t('colOverdue')}</span>
-                                        <span class="font-bold text-red-600 text-lg">${c.stats.od>0?c.stats.od:'-'}</span>
-                                    </div>
-                                    <div class="flex flex-col items-center border-l border-slate-200">
-                                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">${app.t('colUpcoming')}</span>
-                                        <span class="font-bold text-yellow-600 text-lg">${c.stats.upcoming>0?c.stats.upcoming:'-'}</span>
-                                    </div>
-                                    <div class="flex flex-col items-center border-l border-slate-200">
-                                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">${app.t('colRate')}</span>
-                                        <span class="font-bold ${rc} text-lg">${c.stats.rate}%</span>
-                                    </div>
-                                </div>
-                                <div class="flex justify-between items-center mt-2 px-1">
-                                     <div class="text-xs text-slate-400"><span data-i18n="colWarningDays">Days</span>: ${c.warningDays}</div>
-                                     <div class="text-xs text-slate-400"><span data-i18n="colTotal">Total</span>: ${c.stats.all} <span class="mx-1">/</span> <span data-i18n="colDone">Done</span>: ${c.stats.comp}</div>
-                                </div>
-                            </div>
-                        `;
                     });
                 },
                 renderQuickButtons: function() {
