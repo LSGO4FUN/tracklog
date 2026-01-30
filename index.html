@@ -1,0 +1,1661 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Issue Log Monitor</title>
+    <!-- Google Fonts: Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            500: '#6366f1', // Indigo
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            900: '#312e81',
+                        },
+                        urgency: {
+                            critical: '#dc2626', // Red 600
+                            high: '#f97316',     // Orange 500
+                            medium: '#eab308',   // Yellow 500
+                            low: '#3b82f6',      // Blue 500
+                            ref: '#64748b',      // Slate 500
+                        }
+                    },
+                    animation: {
+                        'pulse-fast': 'pulse 1.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'flash-red': 'flashRed 2s infinite',
+                        'flash-yellow': 'flashYellow 2s infinite'
+                    },
+                    keyframes: {
+                        flashRed: {
+                            '0%, 100%': { backgroundColor: '#fee2e2', borderColor: '#ef4444' }, // red-100, red-500
+                            '50%': { backgroundColor: '#fecaca', borderColor: '#b91c1c' }, // red-200, red-700
+                        },
+                        flashYellow: {
+                            '0%, 100%': { backgroundColor: '#fefce8', borderColor: '#eab308' }, // yellow-50, yellow-500
+                            '50%': { backgroundColor: '#fef08a', borderColor: '#ca8a04' }, // yellow-200, yellow-600
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        input, select, textarea {
+            font-size: 16px !important; 
+        }
+        
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .checkbox-wrapper {
+            display: flex;
+            align-items: center;
+        }
+
+        .no-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .no-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        .tag-chip {
+            animation: popIn 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+        @keyframes popIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        /* Calendar Styles */
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(100px, 1fr));
+            gap: 1px;
+            background-color: #e2e8f0;
+            border: 1px solid #e2e8f0;
+        }
+        .calendar-cell {
+            background-color: white;
+            min-height: 100px;
+            padding: 4px;
+        }
+        
+        /* Sortable Header Styles */
+        th.sortable {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        th.sortable:hover {
+            background-color: #f1f5f9;
+        }
+        th.sortable .sort-icon {
+            margin-left: 4px;
+            color: #cbd5e1;
+            font-size: 0.8em;
+        }
+        th.sortable.active .sort-icon {
+            color: #4f46e5;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
+
+    <!-- Global Header -->
+    <header class="bg-white shadow-sm z-30 flex-none border-b border-slate-200">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <h1 class="text-lg font-bold text-brand-700 tracking-tight flex items-center cursor-pointer" onclick="app.router.go('landing')">
+                <i class="fa-solid fa-layer-group mr-2"></i>
+                <span data-i18n="appTitle" class="hidden sm:inline">Issue Log Monitor</span>
+                <span class="sm:hidden">Issue Log</span>
+            </h1>
+            <div class="flex items-center space-x-1">
+                <button onclick="app.handlers.toggleLang()" class="text-xs font-bold text-brand-600 border border-brand-200 bg-brand-50 px-2 py-1 rounded hover:bg-brand-100 transition mr-2" id="lang-btn">
+                    EN / 中
+                </button>
+                <button onclick="app.router.go('config')" class="text-slate-500 hover:text-brand-600 p-2 rounded-full hover:bg-slate-50 transition" title="Settings">
+                    <i class="fa-solid fa-gear text-lg"></i>
+                </button>
+                <div class="w-px h-6 bg-slate-200 my-auto mx-1"></div>
+                <button onclick="app.handlers.exportData()" class="text-slate-500 hover:text-brand-600 p-2 rounded-full hover:bg-slate-50 transition" title="Export">
+                    <i class="fa-solid fa-file-export"></i>
+                </button>
+                <label class="text-slate-500 hover:text-brand-600 p-2 rounded-full hover:bg-slate-50 transition cursor-pointer" title="Import">
+                    <i class="fa-solid fa-file-import"></i>
+                    <input type="file" id="importFile" class="hidden" accept=".json" onchange="app.handlers.importData(this)">
+                </label>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-1 overflow-hidden relative" id="main-container">
+        
+        <!-- View: Landing (Client Login) -->
+        <section id="view-landing" class="h-full flex flex-col items-center justify-center p-4 fade-in">
+            <div class="bg-white rounded-xl shadow-lg border border-slate-200 p-8 w-full max-w-md text-center">
+                <div class="bg-brand-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-brand-600">
+                    <i class="fa-solid fa-user-lock text-3xl"></i>
+                </div>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2" data-i18n="loginTitle">Project Target Login</h2>
+                <p class="text-slate-500 mb-6 text-sm" data-i18n="loginDesc">Please enter target name to access</p>
+                
+                <form onsubmit="event.preventDefault(); app.handlers.loginClient();" class="space-y-4 text-left">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 ml-1" data-i18n="targetLabel">Target</label>
+                        <input type="text" id="login-target" class="w-full pl-4 pr-4 py-3 rounded-lg border-slate-300 border focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition" placeholder="Target Name" data-i18n-placeholder="loginPlaceholder" required oninput="app.handlers.updateLoginProjects()">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1 ml-1" data-i18n="projectLabel">Project</label>
+                        <select id="login-project" class="w-full pl-4 pr-4 py-3 rounded-lg border-slate-300 border focus:border-brand-500 focus:ring-2 focus:ring-brand-200 outline-none transition bg-white" required disabled>
+                            <option value="" disabled selected>Select Project...</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 text-white font-bold py-3 rounded-lg hover:bg-brand-700 transition shadow-md mt-2" data-i18n="enterProject">
+                        Enter Project
+                    </button>
+                </form>
+                <div class="mt-6 text-xs text-slate-400 border-t border-slate-100 pt-4" data-i18n="loginFooter">
+                    To add a target, click the Settings icon above
+                </div>
+                <div id="db-status" class="mt-2 text-[10px] text-slate-300">
+                    Initializing...
+                </div>
+            </div>
+        </section>
+
+        <!-- View: Workspace -->
+        <section id="view-workspace" class="h-full flex flex-col hidden fade-in">
+            <div class="bg-brand-50 border-b border-brand-100 px-4 py-2 flex justify-between items-center flex-none z-20">
+                <div class="flex items-center text-brand-800">
+                    <i class="fa-solid fa-building-circle-check mr-2"></i>
+                    <span class="font-bold text-sm" id="workspace-client-name">Current Target</span>
+                </div>
+                <button onclick="app.handlers.logoutClient()" class="text-xs bg-white text-brand-600 px-3 py-1 rounded border border-brand-200 hover:bg-brand-600 hover:text-white transition">
+                    <i class="fa-solid fa-right-from-bracket mr-1"></i> <span data-i18n="exit">Exit</span>
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto bg-slate-50 p-4 pb-24" id="workspace-content">
+                
+                <!-- Sub-View: List -->
+                <div id="tab-list" class="space-y-4 max-w-5xl mx-auto">
+                    <!-- Alerts -->
+                    <div id="overdue-alert-container" class="hidden animate-flash-red rounded border border-red-300 p-2 shadow-sm mb-2">
+                        <div class="flex items-center text-red-800 text-sm">
+                            <i class="fa-solid fa-triangle-exclamation mr-2 animate-pulse"></i>
+                            <span class="font-bold mr-1" data-i18n="overdueTitle">Overdue:</span>
+                            <span id="overdue-alert-text"></span>
+                        </div>
+                    </div>
+                    <div id="upcoming-alert-container" class="hidden animate-flash-yellow rounded border border-yellow-300 p-2 shadow-sm mb-2">
+                        <div class="flex items-center text-yellow-800 text-sm">
+                            <i class="fa-solid fa-clock mr-2 animate-pulse"></i>
+                            <span class="font-bold mr-1" data-i18n="upcomingTitle">Upcoming:</span>
+                            <span id="upcoming-alert-text"></span>
+                        </div>
+                    </div>
+
+                    <!-- Filters -->
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
+                        <div class="flex flex-wrap gap-2 items-center justify-between mb-2">
+                            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider" data-i18n="filters">Filters</h3>
+                            <button onclick="document.getElementById('advanced-filters').classList.toggle('hidden')" class="text-xs text-brand-600 hover:underline">
+                                <span data-i18n="advanced">Advanced</span> <i class="fa-solid fa-chevron-down ml-1"></i>
+                            </button>
+                        </div>
+                        <div class="flex flex-wrap gap-2 items-center">
+                            <div class="relative flex items-center border border-slate-300 rounded overflow-hidden w-36">
+                                <span class="bg-slate-50 text-slate-500 px-2 text-xs border-r whitespace-nowrap" data-i18n="daysLabel">Days</span>
+                                <input type="number" id="filter-days-input" min="0" onchange="app.handlers.applyFilter()" class="w-full text-sm p-1.5 outline-none pr-7" placeholder=">= 0">
+                                <button onclick="app.handlers.clearDaysFilter()" class="absolute right-1 text-slate-400 hover:text-slate-600 p-1" title="Clear"><i class="fa-solid fa-times-circle text-xs"></i></button>
+                            </div>
+                            <select id="filter-urgency" onchange="app.handlers.applyFilter()" class="rounded border-slate-300 text-sm p-1.5 min-w-[100px] border">
+                                <option value="all" data-i18n="urgencyAll">Urgency (All)</option>
+                                <option value="critical" data-i18n="urgencyCritical">Critical</option>
+                                <option value="high" data-i18n="urgencyHigh">High</option>
+                                <option value="medium" data-i18n="urgencyMedium">Medium</option>
+                                <option value="low" data-i18n="urgencyLow">Low</option>
+                                <option value="ref" data-i18n="urgencyRef">Ref</option>
+                            </select>
+                            <select id="filter-status" onchange="app.handlers.applyFilter()" class="rounded border-slate-300 text-sm p-1.5 min-w-[100px] border">
+                                <option value="incomplete" selected data-i18n="statusIncomplete">Incomplete</option>
+                                <option value="completed" data-i18n="statusCompleted">Completed</option>
+                                <option value="all" data-i18n="statusAll">All Status</option>
+                            </select>
+                        </div>
+                        <div id="advanced-filters" class="hidden mt-3 pt-3 border-t border-slate-100 grid grid-cols-1 md:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1" data-i18n="originator">Originator</label>
+                                <select id="filter-originator" onchange="app.handlers.applyFilter()" class="w-full rounded border-slate-300 text-sm p-1.5 border"><option value="all" data-i18n="all">All</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1" data-i18n="assignee">Assignee</label>
+                                <select id="filter-assignee" onchange="app.handlers.applyFilter()" class="w-full rounded border-slate-300 text-sm p-1.5 border"><option value="all" data-i18n="all">All</option></select>
+                            </div>
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1" data-i18n="sortBy">Sort By</label>
+                                <select id="sort-by" onchange="app.handlers.applyFilter()" class="w-full rounded border-slate-300 text-sm p-1.5 border">
+                                    <option value="due_asc" data-i18n="sortDue">Due Date</option>
+                                    <option value="urgency_desc" data-i18n="sortUrgency">Urgency</option>
+                                    <option value="originator_asc" data-i18n="sortOriginator">Originator</option>
+                                    <option value="assignee_asc" data-i18n="sortAssignee">Assignee</option>
+                                    <option value="status_asc" data-i18n="sortStatus">Status</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="issue-list-container" class="space-y-3"></div>
+                </div>
+
+                <!-- Sub-View: Add/Edit -->
+                <div id="tab-add" class="hidden max-w-3xl mx-auto">
+                    <!-- Form now wraps everything to ensure submit button works -->
+                    <form id="issue-form" onsubmit="event.preventDefault(); app.handlers.saveIssue();" class="bg-white rounded-lg shadow-sm border border-slate-200 relative">
+                        <!-- Sticky Header with Buttons -->
+                        <div class="sticky top-0 z-40 bg-brand-50 px-4 py-3 border-b border-brand-100 flex justify-between items-center shadow-md rounded-t-lg">
+                            <h2 class="text-lg font-bold text-brand-800" id="editor-title" data-i18n="addIssue">Add Issue</h2>
+                            <div class="flex space-x-2">
+                                <button type="button" onclick="app.ui.switchWorkspaceTab('list')" class="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 text-sm font-medium" data-i18n="cancel">Cancel</button>
+                                <button type="submit" class="px-4 py-1.5 bg-brand-600 text-white rounded-md hover:bg-brand-700 shadow-sm text-sm font-medium flex items-center">
+                                    <i class="fa-solid fa-save mr-1"></i> <span data-i18n="save">Save</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <div class="p-5 space-y-5 pb-8">
+                            <input type="hidden" id="edit-issue-id">
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="clientName">Target Name</label>
+                                <input type="text" id="field-client-display" class="w-full rounded-md border-slate-200 bg-slate-50 text-slate-500 p-2 border cursor-not-allowed" readonly>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1"><span data-i18n="issueTitle">Issue Title</span> <span class="text-red-500">*</span></label>
+                                <input type="text" id="field-title" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" placeholder="Enter summary..." data-i18n-placeholder="summaryPlaceholder" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="originator">Originator</label>
+                                <div class="flex flex-wrap gap-2 mb-2 min-h-[1.5rem]" id="tags-originator-container"></div>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="app.ui.tags.addFromInput('originator')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-300 hover:bg-slate-200"><i class="fa-solid fa-plus"></i></button>
+                                    <input type="text" id="input-originator" list="list-originators" class="flex-1 rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                </div>
+                                <datalist id="list-originators"></datalist>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1"><span data-i18n="startTime">Start Time</span> <span class="text-red-500">*</span></label>
+                                    <input type="datetime-local" id="field-start-time" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" required>
+                                </div>
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="dueTime">Due Time</label>
+                                    <input type="datetime-local" id="field-due-time" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border">
+                                    <div class="mt-2 flex flex-wrap gap-2" id="quick-date-buttons"></div>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="assignee">Assignee</label>
+                                <div class="flex flex-wrap gap-2 mb-2 min-h-[1.5rem]" id="tags-assignee-container"></div>
+                                <div class="flex gap-2">
+                                    <button type="button" onclick="app.ui.tags.addFromInput('assignee')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-300 hover:bg-slate-200"><i class="fa-solid fa-plus"></i></button>
+                                    <input type="text" id="input-assignee" list="list-assignees" class="flex-1 rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                </div>
+                                <datalist id="list-assignees"></datalist>
+                            </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+                                <div>
+                                    <label class="block text-sm font-semibold text-slate-700 mb-1"><span data-i18n="urgency">Urgency</span> <span class="text-red-500">*</span></label>
+                                    <select id="field-urgency" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" required>
+                                        <option value="critical" class="text-red-600 font-bold" data-i18n="urgencyCritical">Critical</option>
+                                        <option value="high" class="text-orange-500 font-bold" data-i18n="urgencyHigh">High</option>
+                                        <option value="medium" class="text-yellow-600 font-bold" data-i18n="urgencyMedium">Medium</option>
+                                        <option value="low" class="text-blue-500" data-i18n="urgencyLow">Low</option>
+                                        <option value="ref" class="text-slate-500" data-i18n="urgencyRef">Ref</option>
+                                    </select>
+                                </div>
+                                <div class="flex items-center h-full pt-6">
+                                    <label class="flex items-center space-x-3 cursor-pointer">
+                                        <input type="checkbox" id="field-completed" class="form-checkbox h-5 w-5 text-brand-600 rounded border-slate-300 focus:ring-brand-500">
+                                        <span class="text-sm font-semibold text-slate-700" data-i18n="completed">Completed</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="notes">Notes</label>
+                                <textarea id="field-notes" rows="3" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border"></textarea>
+                            </div>
+                            <div class="mb-4">
+                                <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="images">Images</label>
+                                <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-md hover:border-brand-400 transition bg-slate-50 cursor-pointer" onclick="document.getElementById('field-images-input').click()">
+                                    <div class="text-center">
+                                        <i class="fa-solid fa-image text-slate-400 text-3xl mb-1"></i>
+                                        <div class="text-sm text-brand-600 font-medium" data-i18n="upload">Upload</div>
+                                        <p class="text-xs text-slate-500">PNG, JPG (Auto Compress)</p>
+                                    </div>
+                                </div>
+                                <input type="file" id="field-images-input" multiple accept="image/*" class="hidden" onchange="app.handlers.handleImageSelect(this)">
+                                <div id="image-preview-container" class="grid grid-cols-3 gap-2 mt-4"></div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Sub-View: History -->
+                <div id="tab-history" class="hidden max-w-3xl mx-auto">
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="p-4 border-b border-slate-100 bg-slate-50">
+                             <h3 class="font-bold text-slate-700" data-i18n="historyTitle">Operation History</h3>
+                        </div>
+                        <ul id="history-list" class="divide-y divide-slate-100"></ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Workspace Bottom Nav -->
+            <nav class="bg-white border-t border-slate-200 flex-none z-30 py-2 shadow-[0_-1px_3px_rgba(0,0,0,0.05)]">
+                <div class="flex justify-around items-center max-w-5xl mx-auto">
+                    <button onclick="app.ui.switchWorkspaceTab('list', this)" class="ws-nav-btn flex-1 py-2 text-center text-brand-600 transition group" data-tab="list">
+                        <i class="fa-solid fa-list-check text-xl mb-1 block"></i>
+                        <span class="text-xs font-medium" data-i18n="tabList">List</span>
+                    </button>
+                    <button onclick="app.ui.switchWorkspaceTab('add', this)" class="ws-nav-btn flex-1 py-2 text-center text-slate-400 hover:text-brand-600 transition group" data-tab="add">
+                        <div class="bg-slate-100 text-slate-500 rounded-full w-10 h-10 flex items-center justify-center mx-auto mb-1 group-hover:bg-brand-100 group-hover:text-brand-600 transition-colors">
+                            <i class="fa-solid fa-plus text-lg"></i>
+                        </div>
+                        <span class="text-xs font-medium" data-i18n="tabAdd">Add</span>
+                    </button>
+                    <button onclick="app.ui.switchWorkspaceTab('history', this)" class="ws-nav-btn flex-1 py-2 text-center text-slate-400 hover:text-brand-600 transition group" data-tab="history">
+                        <i class="fa-solid fa-clock-rotate-left text-xl mb-1 block"></i>
+                        <span class="text-xs font-medium" data-i18n="tabHistory">History</span>
+                    </button>
+                </div>
+            </nav>
+        </section>
+
+        <!-- View: Configuration (Global) -->
+        <section id="view-config" class="h-full hidden fade-in overflow-y-auto p-4 bg-slate-100">
+            <div class="max-w-6xl mx-auto space-y-6">
+                <div class="flex items-center mb-2">
+                    <button onclick="app.router.back()" class="mr-3 text-slate-500 hover:text-slate-800 bg-white p-2 rounded-full shadow-sm w-10 h-10">
+                        <i class="fa-solid fa-arrow-left"></i>
+                    </button>
+                    <h2 class="text-xl font-bold text-slate-800" data-i18n="systemSettings">System Settings</h2>
+                </div>
+
+                <!-- Config Tabs -->
+                <div class="flex space-x-4 mb-2 border-b border-slate-200">
+                    <button class="py-2 px-4 border-b-2 border-brand-600 font-bold text-brand-600 transition" id="tab-btn-mgmt" onclick="app.ui.switchConfigTab('mgmt')" data-i18n="tabMgmt">Management</button>
+                    <button class="py-2 px-4 border-b-2 border-transparent text-slate-500 hover:text-slate-700 transition" id="tab-btn-cal" onclick="app.ui.switchConfigTab('cal')" data-i18n="tabCalendar">To-Do Calendar</button>
+                </div>
+
+                <!-- Tab: Management -->
+                <div id="config-content-mgmt">
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5 mb-5">
+                        <h2 class="text-lg font-bold text-slate-700 mb-4 border-b pb-2" data-i18n="clientMgmt">Target Management</h2>
+                        <div class="flex gap-2 mb-4">
+                            <button onclick="app.handlers.addClient()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 whitespace-nowrap order-first">
+                                <i class="fa-solid fa-plus"></i> <span data-i18n="add">Add</span>
+                            </button>
+                            <div class="flex-1 flex gap-2">
+                                <input type="text" id="new-target-name" class="flex-1 rounded-md border-slate-300 shadow-sm p-2 border" placeholder="Target" data-i18n-placeholder="targetPlaceholder">
+                                <input type="text" id="new-project-name" class="flex-1 rounded-md border-slate-300 shadow-sm p-2 border" placeholder="Project" data-i18n-placeholder="projectPlaceholder">
+                                <input type="number" id="new-warning-days" class="w-20 rounded-md border-slate-300 shadow-sm p-2 border text-center" placeholder="Days" value="3">
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-slate-200">
+                                <thead class="bg-slate-50">
+                                    <tr>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase sortable" data-col="target" onclick="app.handlers.sortClients('target')">
+                                            <span data-i18n="colTarget">Target</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-target"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase sortable" data-col="project" onclick="app.handlers.sortClients('project')">
+                                            <span data-i18n="colProject">Project</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-project"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase sortable" data-col="warningDays" onclick="app.handlers.sortClients('warningDays')">
+                                            <span data-i18n="colWarningDays">Days (Set)</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-warningDays"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-red-500 uppercase font-bold sortable" data-col="overdue" onclick="app.handlers.sortClients('overdue')">
+                                            <span data-i18n="colOverdue">Overdue</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-overdue"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-yellow-600 uppercase font-bold sortable" data-col="upcoming" onclick="app.handlers.sortClients('upcoming')">
+                                            <span data-i18n="colUpcoming">Upcoming</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-upcoming"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-slate-500 uppercase sortable" data-col="total" onclick="app.handlers.sortClients('total')">
+                                            <span data-i18n="colTotal">Total</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-total"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-green-600 uppercase sortable" data-col="done" onclick="app.handlers.sortClients('done')">
+                                            <span data-i18n="colDone">Done</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-done"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-center text-xs font-medium text-blue-600 uppercase sortable" data-col="rate" onclick="app.handlers.sortClients('rate')">
+                                            <span data-i18n="colRate">Rate</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-rate"></i>
+                                        </th>
+                                        <th class="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase" data-i18n="colAction">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="client-list-tbody" class="bg-white divide-y divide-slate-200"></tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5">
+                        <h2 class="text-lg font-bold text-slate-700 mb-4 border-b pb-2" data-i18n="quickDateSettings">Quick Date Buttons</h2>
+                        <div id="quick-date-config" class="space-y-2"></div>
+                        <button onclick="app.handlers.addQuickDateSetting()" class="mt-3 text-sm text-brand-600 hover:underline">
+                            + <span data-i18n="addButton">Add Button</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tab: Calendar -->
+                <div id="config-content-cal" class="hidden">
+                    <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-4">
+                        <!-- Cal Filters & View Switch -->
+                        <div class="flex flex-col md:flex-row gap-3 mb-4 items-center justify-between">
+                            <div class="flex gap-2 items-center w-full md:w-auto">
+                                <button onclick="app.handlers.changeCalDate(-1)" class="p-2 text-slate-500 hover:text-brand-600"><i class="fa-solid fa-chevron-left"></i></button>
+                                <h3 id="cal-title" class="text-lg font-bold text-slate-800 w-48 text-center"></h3>
+                                <button onclick="app.handlers.changeCalDate(1)" class="p-2 text-slate-500 hover:text-brand-600"><i class="fa-solid fa-chevron-right"></i></button>
+                            </div>
+                            <div class="flex gap-2 w-full md:w-auto items-center">
+                                <div class="flex rounded-md shadow-sm border border-slate-300 overflow-hidden">
+                                    <button onclick="app.handlers.switchCalMode('biweek')" id="btn-view-biweek" class="px-3 py-1.5 text-sm bg-brand-50 text-brand-700 font-medium">3 Weeks</button>
+                                    <button onclick="app.handlers.switchCalMode('month')" id="btn-view-month" class="px-3 py-1.5 text-sm bg-white text-slate-600 hover:bg-slate-50 border-l border-slate-300">Monthly</button>
+                                </div>
+                                <select id="cal-filter-target" class="rounded border-slate-300 text-sm p-1.5 flex-1" onchange="app.ui.renderCalendar()"></select>
+                                <select id="cal-filter-project" class="rounded border-slate-300 text-sm p-1.5 flex-1" onchange="app.ui.renderCalendar()"></select>
+                            </div>
+                        </div>
+
+                        <!-- Legend -->
+                        <div class="flex flex-wrap gap-3 mb-4 text-xs justify-center border-b border-slate-100 pb-3">
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-100 border border-red-500 mr-1"></span> <span data-i18n="urgencyCritical">Critical</span></div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-orange-100 border border-orange-500 mr-1"></span> <span data-i18n="urgencyHigh">High</span></div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-yellow-100 border border-yellow-500 mr-1"></span> <span data-i18n="urgencyMedium">Medium</span></div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-blue-100 border border-blue-500 mr-1"></span> <span data-i18n="urgencyLow">Low</span></div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-slate-100 border border-slate-500 mr-1"></span> <span data-i18n="urgencyRef">Ref</span></div>
+                            <div class="flex items-center"><span class="w-3 h-3 rounded-full bg-red-600 border border-red-800 mr-1"></span> <span data-i18n="overdueTag">Overdue</span></div>
+                        </div>
+
+                        <!-- Grid -->
+                        <div class="overflow-x-auto">
+                            <div class="min-w-[700px]"> <!-- Ensure horizontal scroll on small mobile -->
+                                <div class="grid grid-cols-7 text-center mb-1" id="calendar-header">
+                                    <!-- Headers generated by JS -->
+                                </div>
+                                <div id="calendar-grid" class="calendar-grid"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modals -->
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-xl max-w-sm w-full transform transition-all scale-100 p-6">
+            <h3 id="modal-title" class="text-lg font-bold text-slate-800 mb-2">Prompt</h3>
+            <p id="modal-message" class="text-slate-600 mb-4 text-sm leading-relaxed"></p>
+            <input type="text" id="modal-input" class="w-full border border-slate-300 rounded p-2 mb-4 hidden focus:ring-2 focus:ring-red-500 outline-none" placeholder="Input here...">
+            <div class="flex justify-end space-x-2">
+                <button id="modal-btn-cancel" class="px-4 py-2 rounded text-slate-600 hover:bg-slate-100 font-medium hidden" data-i18n="cancel">Cancel</button>
+                <button id="modal-btn-confirm" class="px-4 py-2 rounded bg-brand-600 text-white hover:bg-brand-700 shadow-sm font-medium" data-i18n="confirm">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="image-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-2" onclick="this.classList.add('hidden')">
+        <img id="image-modal-src" src="" class="max-w-full max-h-full rounded shadow-2xl object-contain">
+        <button class="absolute top-4 right-4 text-white bg-white/20 rounded-full w-10 h-10 flex items-center justify-center hover:bg-white/40"><i class="fa-solid fa-times"></i></button>
+    </div>
+
+    <div id="detail-modal" class="fixed inset-0 bg-slate-900/50 z-40 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 rounded-t-lg">
+                <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-circle-info mr-2 text-brand-600"></i><span data-i18n="issueDetail">Issue Detail</span></h3>
+                <button onclick="document.getElementById('detail-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl"><i class="fa-solid fa-times"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-1 text-slate-700" id="detail-content"></div>
+            <div class="p-4 border-t border-slate-100 flex justify-end space-x-3 bg-slate-50 rounded-b-lg">
+                <button id="btn-delete-issue" class="px-4 py-2 bg-red-50 text-red-600 border border-red-200 rounded hover:bg-red-100 font-medium mr-auto"><i class="fa-solid fa-trash mr-1"></i> <span data-i18n="delBtn">Delete</span></button>
+                <button id="btn-edit-issue" class="px-4 py-2 bg-brand-600 text-white rounded hover:bg-brand-700 shadow-sm font-medium"><i class="fa-solid fa-pen mr-1"></i> <span data-i18n="edit">Edit</span></button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const app = {
+            state: { 
+                currentClient: null, 
+                lastView: 'landing', 
+                lang: 'zh', 
+                calDate: new Date(), 
+                calMode: 'biweek',
+                clientSort: { column: 'target', order: 'asc' } // Added for sorting
+            },
+            data: { clients: [], issues: [], settings: { quickDates: [] }, history: [] },
+            
+            i18n: {
+                en: {
+                    appTitle: "Issue Log Monitor", loginTitle: "Project Login", loginDesc: "Select target and project to access", loginPlaceholder: "Target Name", enterProject: "Enter Project", loginFooter: "To add a target, click the Settings icon above", exit: "Exit", overdueTitle: "Overdue", upcomingTitle: "Upcoming", filters: "Filters", advanced: "Advanced", daysLabel: "Days", urgencyAll: "Urgency (All)", urgencyCritical: "Critical", urgencyHigh: "High", urgencyMedium: "Medium", urgencyLow: "Low", urgencyRef: "Ref", statusIncomplete: "Incomplete", statusCompleted: "Completed", statusAll: "All Status", originator: "Originator", assignee: "Assignee", all: "All", sortBy: "Sort By", sortDue: "Due Date", sortUrgency: "Urgency", sortOriginator: "Originator", sortAssignee: "Assignee", sortStatus: "Status", addIssue: "Add Issue", clientName: "Target Name", issueTitle: "Issue Title", summaryPlaceholder: "Enter summary...", tagNamePlaceholder: "Type or select name", startTime: "Start Time", dueTime: "Due Time", urgency: "Urgency", completed: "Completed", notes: "Notes", images: "Images", upload: "Upload", cancel: "Cancel", save: "Save", historyTitle: "Operation History", tabList: "List", tabAdd: "Add", tabHistory: "History", systemSettings: "System Settings", clientMgmt: "Target Management", newClientPlaceholder: "Target", add: "Add", colName: "Name", colOverdue: "Overdue", colUpcoming: "Upcoming", colTotal: "Total", colDone: "Done", colRate: "Rate", colAction: "Action", colWarningDays: "Days (Set)", quickDateSettings: "Quick Date Buttons", addButton: "Add Button", confirm: "Confirm", issueDetail: "Issue Detail", edit: "Edit", close: "Close", editBtn: "Edit", delBtn: "Del", sysPrompt: "System Prompt", overdueText: "{n} items overdue", upcomingText: "{n} items upcoming", noHistory: "No History", noIssues: "No issues found", saved: "Saved successfully", clientNotFound: "Target not found: \"{n}\"\nPlease check name or add in settings.", clientAdded: "Target added successfully", renameTitle: "Rename Target", renameMsg: "Enter new name", renameSuccess: "Renamed successfully, updated {n} issues", delTitle: "Confirm Delete", delMsg: "Delete target <b>{n}</b> and ALL related data?<br>Please type target name to confirm:", delSuccess: "Target {n} deleted", imgError: "Image processing failed", importSuccess: "Data imported successfully", importError: "Invalid format", readError: "Read failed", itemsOverdue: "items overdue", pleaseSetStart: "Please set Start Time first", confirmCompleteTitle: "Confirm Completion", confirmCompleteMsg: "Are you sure you want to mark this issue as Completed?", confirmDeleteIssueTitle: "Delete Issue", confirmDeleteIssueMsg: "Are you sure you want to delete this issue?", issueDeleted: "Issue deleted successfully", overdueTag: "Overdue", dateError: "Due Time cannot be earlier than Start Time.", logCreated: "Created", logModified: "Modified", logStatusChange: "Status Change", logDeleted: "Deleted", fieldTitle: "Title", fieldOriginator: "Originator", fieldStartTime: "Start Time", fieldDueTime: "Due Time", fieldAssignee: "Assignee", fieldUrgency: "Urgency", fieldCompleted: "Status", valNotesUpdated: "Notes updated", valImagesUpdated: "Images updated", colTarget: "Target", colProject: "Project", targetPlaceholder: "Target", projectPlaceholder: "Project", targetLabel: "Target", projectLabel: "Project", renameTargetTitle: "Rename Target", renameTargetMsg: "New Target Name:", renameProjectTitle: "Rename Project", renameProjectMsg: "New Project Name:", editClientTitle: "Edit Target Info", editTargetMsg: "Target Name:", editProjectMsg: "Project Name:", editDaysMsg: "Warning Days:", sameNameError: "Name already exists", tabMgmt: "Management", tabCalendar: "To-Do Calendar", viewBiWeek: "3 Weeks", viewMonth: "Monthly",
+                    nameTooLongTarget: "Target name is too long (Limit: ~10 Chinese or 20 English chars)", nameTooLongProject: "Project name is too long (Limit: ~20 Chinese or 40 English chars)",
+                    months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+                    weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
+                },
+                zh: {
+                    appTitle: "Issue Log Monitor", loginTitle: "專案登入", loginDesc: "請輸入專案對象並選擇專案", loginPlaceholder: "專案對象名稱", enterProject: "進入專案", loginFooter: "如需新增對象，請點擊上方設定圖示", exit: "離開", overdueTitle: "逾期警報", upcomingTitle: "即將到期警報", filters: "篩選條件", advanced: "進階", daysLabel: "天數", urgencyAll: "急迫性 (全部)", urgencyCritical: "極高", urgencyHigh: "高", urgencyMedium: "中", urgencyLow: "低", urgencyRef: "參考", statusIncomplete: "未完工", statusCompleted: "已完工", statusAll: "全部狀態", originator: "發起人", assignee: "指派人", all: "全部", sortBy: "排序", sortDue: "期限", sortUrgency: "急迫性", sortOriginator: "發起人", sortAssignee: "指派人", sortStatus: "狀態", addIssue: "新增議題", clientName: "專案對象", issueTitle: "議題名稱", summaryPlaceholder: "輸入摘要...", tagNamePlaceholder: "輸入名字或選擇...", startTime: "提出時間", dueTime: "完成時間", urgency: "急迫性", completed: "已完工", notes: "補充資訊", images: "補充圖片", upload: "上傳圖片", cancel: "取消", save: "儲存", historyTitle: "操作紀錄", tabList: "列表", tabAdd: "新增", tabHistory: "紀錄", systemSettings: "系統設定", clientMgmt: "專案對象維護", newClientPlaceholder: "對象", add: "新增", colName: "名稱", colOverdue: "逾期", colUpcoming: "即將到期", colTotal: "議題", colDone: "完工", colRate: "達成率", colAction: "操作", colWarningDays: "預警天數", quickDateSettings: "快速完成日設定", addButton: "新增按鈕", confirm: "確認", issueDetail: "議題詳情", edit: "修改", close: "關閉", editBtn: "修改", delBtn: "刪除", sysPrompt: "系統提示", overdueText: "{n} 個議題逾期未完工", upcomingText: "{n} 個議題即將到期", noHistory: "此對象尚無紀錄", noIssues: "無相關議題", saved: "儲存成功", clientNotFound: "找不到對象：「{n}」\n請確認名稱或至設定頁面新增。", clientAdded: "對象新增成功", renameTitle: "修改對象名稱", renameMsg: "請輸入新名稱", renameSuccess: "更名成功，共更新 {n} 筆議題", delTitle: "刪除確認", delMsg: "刪除對象 <b>{n}</b> 將一併刪除其所有資料。<br>請輸入對象名稱確認：", delSuccess: "已刪除對象 {n}", imgError: "圖片處理失敗", importSuccess: "資料匯入成功", importError: "格式錯誤", readError: "讀取失敗", itemsOverdue: "個議題逾期", pleaseSetStart: "請先設定提出時間", confirmCompleteTitle: "完工確認", confirmCompleteMsg: "您確定要將此議題標記為已完工嗎？", confirmDeleteIssueTitle: "刪除議題", confirmDeleteIssueMsg: "您確定要刪除此議題嗎？", issueDeleted: "議題已刪除", overdueTag: "已逾期", dateError: "完成時間不能早於提出時間。", logCreated: "新增議題", logModified: "修改議題", logStatusChange: "狀態變更", logDeleted: "刪除議題", fieldTitle: "議題名稱", fieldOriginator: "發起人", fieldStartTime: "提出時間", fieldDueTime: "完成時間", fieldAssignee: "指派人", fieldUrgency: "急迫性", fieldCompleted: "狀態", valNotesUpdated: "變更補充資訊", valImagesUpdated: "變更補充圖片", colTarget: "對象", colProject: "專案", targetPlaceholder: "對象", projectPlaceholder: "專案", targetLabel: "對象", projectLabel: "專案", renameTargetTitle: "修改對象", renameTargetMsg: "新對象名稱:", renameProjectTitle: "修改專案", renameProjectMsg: "新專案名稱:", editClientTitle: "修改專案對象", editTargetMsg: "對象名稱:", editProjectMsg: "專案名稱:", editDaysMsg: "預警天數:", sameNameError: "該組合已存在", tabMgmt: "管理", tabCalendar: "代辦行事曆", viewBiWeek: "三週", viewMonth: "月曆",
+                    nameTooLongTarget: "對象名稱太長 (限制: ~10中文字或20英文字)", nameTooLongProject: "專案名稱太長 (限制: ~20中文字或40英文字)",
+                    months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
+                    weekdays: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"]
+                }
+            },
+            
+            CONSTANTS: {
+                URGENCY: {
+                    'critical': { color: 'text-red-600', bg: 'bg-red-50', badge: 'bg-red-100 text-red-800' },
+                    'high':     { color: 'text-orange-500', bg: 'bg-orange-50', badge: 'bg-orange-100 text-orange-800' },
+                    'medium':   { color: 'text-yellow-600', bg: 'bg-yellow-50', badge: 'bg-yellow-100 text-yellow-800' },
+                    'low':      { color: 'text-blue-500', bg: 'bg-blue-50', badge: 'bg-blue-100 text-blue-800' },
+                    'ref':      { color: 'text-slate-500', bg: 'bg-slate-50', badge: 'bg-slate-100 text-slate-800' },
+                }
+            },
+
+            t: function(key, params = {}) {
+                let text = this.i18n[this.state.lang][key];
+                if (!text) return key;
+                for (const [k, v] of Object.entries(params)) { text = text.replace(`{${k}}`, v); }
+                return text;
+            },
+
+            init: function() {
+                try {
+                    this.storage.initDB().then(() => {
+                        this.storage.load();
+                        const now = new Date();
+                        now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+                        document.getElementById('field-start-time').value = now.toISOString().slice(0, 16);
+                        this.ui.updateLanguage();
+                        this.ui.tags.setupListeners('originator');
+                        this.ui.tags.setupListeners('assignee');
+                    }).catch(e => {
+                        console.error("Critical Init Error", e);
+                        const str = localStorage.getItem('project_mgr_data');
+                        if(str) { 
+                            app.data = JSON.parse(str); 
+                            app.ui.updateLanguage();
+                        }
+                    });
+                } catch(e) {
+                    console.error("Init failed", e);
+                    alert("App Init Failed. Please reload.");
+                }
+            },
+
+            storage: {
+                db: null,
+                dbName: 'ProjectManagerDB',
+                initDB: function() {
+                    return new Promise((resolve) => {
+                        try {
+                            const req = indexedDB.open(this.dbName, 1);
+                            req.onerror = () => { document.getElementById('db-status').innerText="Mode: LocalStorage"; resolve(); };
+                            req.onupgradeneeded = e => { if(!e.target.result.objectStoreNames.contains('store')) e.target.result.createObjectStore('store'); };
+                            req.onsuccess = e => { this.db=e.target.result; document.getElementById('db-status').innerText="Mode: IndexedDB"; resolve(); };
+                        } catch(e) { resolve(); }
+                    });
+                },
+                save: function() {
+                    if (this.db) { try { this.db.transaction(['store'], 'readwrite').objectStore('store').put(app.data, 'rootData'); } catch(e){} }
+                    try { localStorage.setItem('project_mgr_data', JSON.stringify(app.data)); } catch(e){}
+                },
+                load: function() {
+                    const handle = d => {
+                        if(!d) return;
+                        app.data = d;
+                        if(!app.data.clients) app.data.clients=[];
+                        if(!app.data.issues) app.data.issues=[];
+                        if(!app.data.history) app.data.history=[];
+                        if(!app.data.settings) app.data.settings={quickDates:[]};
+                        
+                        // Migration
+                        if(app.data.clients.length>0 && typeof app.data.clients[0] === 'string') {
+                            const newClients = [];
+                            app.data.clients.forEach(cStr => {
+                                newClients.push({target: cStr, project: 'General', id: `${cStr} - General`, warningDays: 3});
+                            });
+                            app.data.clients = newClients;
+                            app.data.issues.forEach(i => {
+                                if(i.client && !i.client.includes(' - ')) {
+                                    i.client = `${i.client} - General`;
+                                }
+                            });
+                            this.save();
+                        }
+                        
+                        app.data.clients.forEach(c => {
+                            if(c.warningDays === undefined) c.warningDays = 3;
+                        });
+                        
+                        app.ui.updateLanguage();
+                    };
+                    if (this.db) {
+                        const tx = this.db.transaction(['store'], 'readonly');
+                        const req = tx.objectStore('store').get('rootData');
+                        req.onsuccess = e => { if(e.target.result) handle(e.target.result); else this.loadLS(handle); };
+                        req.onerror = () => this.loadLS(handle);
+                    } else this.loadLS(handle);
+                },
+                loadLS: function(cb) {
+                    const s = localStorage.getItem('project_mgr_data');
+                    if(s) try { cb(JSON.parse(s)); } catch(e){}
+                },
+                log: function(action, details, client = null) {
+                    app.data.history.unshift({ time: new Date().toISOString(), action, details, client });
+                    if(app.data.history.length>500) app.data.history.pop();
+                    this.save();
+                }
+            },
+
+            router: {
+                go: function(id) {
+                    if (id === 'workspace' && !app.state.currentClient) return this.go('landing');
+                    document.querySelectorAll('main > section').forEach(el => el.classList.add('hidden'));
+                    document.getElementById(`view-${id}`).classList.remove('hidden');
+                    if (id === 'landing') {
+                        app.state.lastView = 'landing';
+                        document.getElementById('login-target').value = '';
+                        document.getElementById('login-project').innerHTML = '<option value="" disabled selected>Select Project...</option>';
+                        document.getElementById('login-project').disabled = true;
+                    } else if (id === 'config') {
+                        app.ui.switchConfigTab('mgmt'); // Default to mgmt
+                        app.ui.renderClientList();
+                    } else if (id === 'workspace') {
+                        app.state.lastView = 'workspace';
+                        app.ui.switchWorkspaceTab('list');
+                    }
+                },
+                back: function() {
+                    if (app.state.currentClient) this.go('workspace'); else this.go('landing');
+                }
+            },
+
+            handlers: {
+                toggleLang: function() { app.state.lang = app.state.lang==='en'?'zh':'en'; app.ui.updateLanguage(); },
+                updateLoginProjects: function() {
+                    const target = document.getElementById('login-target').value.trim();
+                    const sel = document.getElementById('login-project');
+                    sel.innerHTML = '<option value="" disabled selected>Select Project...</option>';
+                    if(!target) { sel.disabled=true; return; }
+                    
+                    const projects = app.data.clients.filter(c => c.target === target).map(c => c.project).sort();
+                    if(projects.length > 0) {
+                        sel.disabled = false;
+                        projects.forEach(p => {
+                            const opt = document.createElement('option');
+                            opt.value = p; opt.innerText = p;
+                            sel.appendChild(opt);
+                        });
+                    } else {
+                        sel.disabled = true;
+                    }
+                },
+                loginClient: function() {
+                    const t = document.getElementById('login-target').value.trim();
+                    const p = document.getElementById('login-project').value;
+                    if (!t || !p) return;
+                    
+                    const clientObj = app.data.clients.find(c => c.target === t && c.project === p);
+                    if (clientObj) {
+                        app.state.currentClient = clientObj.id || `${t} - ${p}`;
+                        document.getElementById('workspace-client-name').innerText = `${t} - ${p}`;
+                        app.router.go('workspace');
+                    } else {
+                        app.ui.alert(app.t('clientNotFound', {n: `${t} - ${p}`}));
+                    }
+                },
+                logoutClient: function() { app.state.currentClient = null; app.router.go('landing'); },
+                addClient: function() {
+                    try {
+                        const t = document.getElementById('new-target-name').value.trim();
+                        const p = document.getElementById('new-project-name').value.trim();
+                        const d = parseInt(document.getElementById('new-warning-days').value) || 3;
+                        if (!t || !p) return app.ui.alert(app.t('newClientPlaceholder'));
+                        
+                        // Validation
+                        if (!app.utils.checkLength(t, 20)) return app.ui.alert(app.t('nameTooLongTarget'));
+                        if (!app.utils.checkLength(p, 40)) return app.ui.alert(app.t('nameTooLongProject'));
+
+                        const id = `${t} - ${p}`;
+                        if (app.data.clients.some(c => c.id === id)) return app.ui.alert(app.t('sameNameError'));
+                        
+                        app.data.clients.push({ target: t, project: p, id: id, warningDays: d });
+                        app.storage.log('System', `Added: ${id}`);
+                        app.storage.save();
+                        app.ui.renderClientList();
+                        document.getElementById('new-target-name').value = '';
+                        document.getElementById('new-project-name').value = '';
+                        app.ui.alert(app.t('clientAdded'));
+                    } catch(e) { app.ui.alert("Add Error: " + e.message); }
+                },
+                sortClients: function(col) {
+                    const current = app.state.clientSort;
+                    if (current.column === col) {
+                        // Toggle order
+                        current.order = current.order === 'asc' ? 'desc' : 'asc';
+                    } else {
+                        // New column, default to asc
+                        current.column = col;
+                        current.order = 'asc';
+                    }
+                    app.ui.renderClientList();
+                },
+                editClientInfo: function(oldId) {
+                    try {
+                        const oldObj = app.data.clients.find(c => c.id === oldId);
+                        if(!oldObj) return;
+                        
+                        app.ui.promptInput(app.t('editClientTitle'), app.t('editTargetMsg'), oldObj.target, (newTarget) => {
+                            const nt = newTarget.trim();
+                            if(!nt) return;
+                            if (!app.utils.checkLength(nt, 20)) return app.ui.alert(app.t('nameTooLongTarget'));
+                            
+                            setTimeout(() => {
+                                app.ui.promptInput(app.t('editClientTitle'), app.t('editProjectMsg'), oldObj.project, (newProject) => {
+                                    const np = newProject.trim();
+                                    if(!np) return;
+                                    if (!app.utils.checkLength(np, 40)) return app.ui.alert(app.t('nameTooLongProject'));
+                                    
+                                    setTimeout(() => {
+                                        app.ui.promptInput(app.t('editClientTitle'), app.t('editDaysMsg'), oldObj.warningDays, (newDays) => {
+                                            const nd = parseInt(newDays);
+                                            if(isNaN(nd)) return;
+
+                                            const newId = `${nt} - ${np}`;
+                                            if(newId !== oldId && app.data.clients.some(c => c.id === newId)) return app.ui.alert(app.t('sameNameError'));
+                                            
+                                            // Update Client
+                                            oldObj.target = nt;
+                                            oldObj.project = np;
+                                            oldObj.id = newId;
+                                            oldObj.warningDays = nd;
+                                            
+                                            // Update Issues
+                                            let count = 0;
+                                            app.data.issues.forEach(i => {
+                                                if(i.client === oldId) { i.client = newId; count++; }
+                                            });
+                                            app.data.history.forEach(h => { if(h.client === oldId) h.client = newId; });
+                                            
+                                            app.storage.log('System', `Updated: ${oldId} -> ${newId}`);
+                                            app.storage.save();
+                                            app.ui.renderClientList();
+                                            app.ui.alert(app.t('renameSuccess', {n: count}));
+                                            
+                                            if(app.state.currentClient === oldId) {
+                                                app.state.currentClient = newId;
+                                                document.getElementById('workspace-client-name').innerText = newId;
+                                            }
+                                        });
+                                    }, 200);
+                                });
+                            }, 200);
+                        });
+                    } catch(e) { app.ui.alert("Edit Error: " + e.message); }
+                },
+                deleteClient: function(id) {
+                    try {
+                        app.ui.confirmDelete(id, () => {
+                            app.data.clients = app.data.clients.filter(c => c.id !== id);
+                            app.data.issues = app.data.issues.filter(i => i.client !== id);
+                            app.storage.log('System', `Deleted: ${id}`);
+                            app.storage.save();
+                            app.ui.renderClientList();
+                        });
+                    } catch(e) { app.ui.alert("Delete Error: " + e.message); }
+                },
+                // ... Issue Handlers ...
+                updatePeopleDropdowns: function() {
+                    const clientName = app.state.currentClient;
+                    if (!clientName) return;
+                    const originators = new Set();
+                    const assignees = new Set();
+                    app.data.issues.filter(i => i.client === clientName).forEach(i => {
+                        if (i.originator) i.originator.split(',').forEach(p => originators.add(p.trim()));
+                        if (i.assignee) i.assignee.split(',').forEach(p => assignees.add(p.trim()));
+                    });
+                    const sortedO = Array.from(originators).sort((a,b)=>String(a).localeCompare(String(b)));
+                    const sortedA = Array.from(assignees).sort((a,b)=>String(a).localeCompare(String(b)));
+                    const pop = (id, list) => {
+                        const dl = document.getElementById(id); dl.innerHTML = '';
+                        list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; dl.appendChild(o);} });
+                    };
+                    pop('list-originators', sortedO); pop('list-assignees', sortedA);
+                    
+                    const fillFilter = (id, list) => {
+                        const el = document.getElementById(id);
+                        const old = el.value;
+                        el.innerHTML = `<option value="all">${app.t('all')}</option>`;
+                        list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; o.innerText=p; el.appendChild(o);} });
+                        if(Array.from(el.options).some(o=>o.value===old)) el.value=old;
+                    };
+                    fillFilter('filter-originator', sortedO);
+                    fillFilter('filter-assignee', sortedA);
+                },
+                clearDaysFilter: function() {
+                    document.getElementById('filter-days-input').value = "";
+                    app.handlers.applyFilter();
+                },
+                applyFilter: function() {
+                    if (!app.state.currentClient) return;
+                    
+                    const clientConfig = app.data.clients.find(c => c.id === app.state.currentClient);
+                    const warningDays = clientConfig ? (clientConfig.warningDays || 3) : 3;
+                    
+                    let res = app.data.issues.filter(i => i.client === app.state.currentClient);
+                    const now = new Date();
+                    const overdue = res.filter(i => i.dueTime && new Date(i.dueTime) < now && !i.completed);
+                    
+                    const warningDate = new Date();
+                    warningDate.setDate(now.getDate() + warningDays);
+                    const upcoming = res.filter(i => 
+                        !i.completed && 
+                        i.dueTime && 
+                        new Date(i.dueTime) >= now && 
+                        new Date(i.dueTime) <= warningDate
+                    );
+                    
+                    app.ui.renderOverdueAlert(overdue.length);
+                    app.ui.renderUpcomingAlert(upcoming.length);
+
+                    const s = document.getElementById('filter-status').value;
+                    const d = document.getElementById('filter-days-input').value;
+                    const u = document.getElementById('filter-urgency').value;
+                    const o = document.getElementById('filter-originator').value;
+                    const a = document.getElementById('filter-assignee').value;
+
+                    if (s === 'incomplete') res = res.filter(i => !i.completed);
+                    if (s === 'completed') res = res.filter(i => i.completed);
+                    if (u !== 'all') res = res.filter(i => i.urgency === u);
+                    if (o !== 'all') res = res.filter(i => (i.originator||'').includes(o));
+                    if (a !== 'all') res = res.filter(i => (i.assignee||'').includes(a));
+                    if (d !== "") {
+                        const target = new Date(); target.setDate(now.getDate() + parseInt(d));
+                        res = res.filter(i => i.dueTime && new Date(i.dueTime) <= target);
+                    }
+
+                    const sm = document.getElementById('sort-by').value;
+                    res.sort((x, y) => {
+                        if (sm === 'due_asc') return (x.dueTime?new Date(x.dueTime):9e14) - (y.dueTime?new Date(y.dueTime):9e14);
+                        if (sm === 'urgency_desc') { const m={critical:5,high:4,medium:3,low:2,ref:1}; return m[y.urgency]-m[x.urgency]; }
+                        if (sm === 'originator_asc') return String(x.originator||'').localeCompare(String(y.originator||''));
+                        if (sm === 'assignee_asc') return String(x.assignee||'').localeCompare(String(y.assignee||''));
+                        if (sm === 'status_asc') return (x.completed===y.completed)?0:x.completed?1:-1;
+                        return 0;
+                    });
+                    app.ui.renderIssueList(res);
+                },
+                saveIssue: function() {
+                    try {
+                        const id = document.getElementById('edit-issue-id').value;
+                        const start = document.getElementById('field-start-time').value;
+                        const due = document.getElementById('field-due-time').value;
+                        if (start && due && new Date(start) > new Date(due)) return app.ui.alert(app.t('dateError'));
+
+                        const imgs = [];
+                        document.querySelectorAll('input[name="image_data[]"]').forEach(i => imgs.push(i.value));
+                        
+                        const originators = app.ui.tags.get('originator');
+                        const assignees = app.ui.tags.get('assignee');
+                        
+                        // Safety check for history
+                        if(!app.data.history) app.data.history = [];
+                        if(!app.data.issues) app.data.issues = [];
+
+                        let seqId;
+                        if (id) {
+                            const existing = app.data.issues.find(i => i.id === id);
+                            if (existing) {
+                                seqId = existing.seqId;
+                            } else {
+                                seqId = (app.data.issues.filter(i=>i.client===app.state.currentClient).length+1);
+                            }
+                        } else {
+                            seqId = (app.data.issues.filter(i=>i.client===app.state.currentClient).length+1);
+                        }
+
+                        const newData = {
+                            id: id || app.utils.uuid(),
+                            client: app.state.currentClient,
+                            seqId: seqId,
+                            title: document.getElementById('field-title').value,
+                            originator: originators,
+                            startTime: start,
+                            dueTime: due,
+                            assignee: assignees,
+                            urgency: document.getElementById('field-urgency').value,
+                            completed: !!document.getElementById('field-completed').checked, // Force boolean
+                            notes: document.getElementById('field-notes').value,
+                            images: imgs
+                        };
+
+                        if(id && app.data.issues.some(i => i.id === id)) {
+                            const idx = app.data.issues.findIndex(i=>i.id===id);
+                            const old = app.data.issues[idx];
+                            let chg = [];
+                            const fields = [
+                                {k:'title',l:'fieldTitle'},{k:'originator',l:'fieldOriginator'},{k:'startTime',l:'fieldStartTime',f:true},
+                                {k:'dueTime',l:'fieldDueTime',f:true},{k:'assignee',l:'fieldAssignee'},{k:'urgency',l:'fieldUrgency'},{k:'completed',l:'fieldCompleted'}
+                            ];
+                            fields.forEach(x => {
+                                let ov = old[x.k], nv = newData[x.k];
+                                if(x.f) { ov=app.utils.formatDate(ov); nv=app.utils.formatDate(nv); }
+                                if(String(ov)!==String(nv)) chg.push({field:x.l, type:'field', old:old[x.k], new:newData[x.k], key:x.k});
+                            });
+                            if(old.notes!==newData.notes) chg.push({type:'simple', labelKey:'valNotesUpdated'});
+                            if(JSON.stringify(old.images)!==JSON.stringify(newData.images)) chg.push({type:'simple', labelKey:'valImagesUpdated'});
+                            if(chg.length===0) chg.push({type:'simple', label:'No changes'});
+                            app.data.issues[idx] = newData;
+                            app.storage.log('logModified', {seqId:newData.seqId, changes:chg}, newData.client);
+                        } else {
+                            app.data.issues.push(newData);
+                            app.storage.log('logCreated', {seqId:newData.seqId, title:newData.title}, newData.client);
+                        }
+                        app.storage.save();
+                        app.ui.switchWorkspaceTab('list');
+                        // Force refresh filter
+                        app.handlers.applyFilter();
+                    } catch(e) {
+                        console.error(e);
+                        app.ui.alert("Error saving issue: " + e.message);
+                    }
+                },
+                editIssue: function(id) {
+                    const i = app.data.issues.find(x=>x.id===id); if(!i) return;
+                    document.getElementById('edit-issue-id').value = i.id;
+                    document.getElementById('editor-title').innerText = `${app.t('edit')} #${i.seqId}`;
+                    document.getElementById('field-client-display').value = i.client;
+                    document.getElementById('field-title').value = i.title;
+                    document.getElementById('field-start-time').value = i.startTime;
+                    document.getElementById('field-due-time').value = i.dueTime || '';
+                    document.getElementById('field-urgency').value = i.urgency;
+                    document.getElementById('field-completed').checked = !!i.completed; // Ensure boolean
+                    document.getElementById('field-notes').value = i.notes || '';
+                    app.ui.tags.render('originator', i.originator);
+                    app.ui.tags.render('assignee', i.assignee);
+                    const ic = document.getElementById('image-preview-container'); ic.innerHTML='';
+                    if(i.images) i.images.forEach(b => app.ui.renderImagePreview(b, ic));
+                    
+                    document.getElementById('detail-modal').classList.add('hidden');
+                    
+                    // Force view switch if coming from calendar
+                    document.getElementById('view-config').classList.add('hidden');
+                    document.getElementById('view-landing').classList.add('hidden');
+                    document.getElementById('view-workspace').classList.remove('hidden');
+                    
+                    app.ui.switchWorkspaceTab('add');
+                },
+                toggleComplete: function(id, chk) {
+                    if(chk.checked) {
+                        app.ui.confirmAction(app.t('confirmCompleteTitle'), app.t('confirmCompleteMsg'), 
+                            () => app.handlers.doToggleComplete(id, true), () => { chk.checked=false; });
+                    } else { app.handlers.doToggleComplete(id, false); }
+                },
+                doToggleComplete: function(id, st) {
+                    const i = app.data.issues.find(x=>x.id===id);
+                    if(i) {
+                        const old = i.completed; i.completed = st;
+                        app.storage.log('logStatusChange', {seqId:i.seqId, title:i.title, changes:[{field:'fieldCompleted',type:'field',old:old,new:st,key:'completed'}]}, i.client);
+                        app.storage.save(); app.handlers.applyFilter();
+                    }
+                },
+                deleteIssue: function(id) {
+                    app.ui.confirmAction(app.t('confirmDeleteIssueTitle'), app.t('confirmDeleteIssueMsg'), () => {
+                        const idx = app.data.issues.findIndex(x=>x.id===id);
+                        if(idx>-1) {
+                            const i = app.data.issues[idx];
+                            app.storage.log('logDeleted', {seqId:i.seqId, title:i.title}, i.client);
+                            app.data.issues.splice(idx,1);
+                            app.storage.save();
+                            document.getElementById('detail-modal').classList.add('hidden');
+                            app.handlers.applyFilter();
+                            app.ui.renderCalendar(); // Update calendar
+                            app.ui.alert(app.t('issueDeleted'));
+                        }
+                    });
+                },
+                handleImageSelect: async function(input) {
+                    if(!input.files.length) return;
+                    for(let f of Array.from(input.files)) {
+                        try { 
+                            const b = await app.utils.compressImage(f); 
+                            app.ui.renderImagePreview(b, document.getElementById('image-preview-container')); 
+                        } catch(e){ 
+                            console.error(e);
+                            app.ui.alert(app.t('imgError')); 
+                        }
+                    }
+                    input.value='';
+                },
+                addQuickDateSetting: function() { app.data.settings.quickDates.push({labelEn:"New",labelZh:"新設定",days:1}); app.storage.save(); app.ui.renderQuickButtons(); },
+                updateQuickDateSetting: function(idx, k, v) { app.data.settings.quickDates[idx][k]=v; app.storage.save(); app.ui.renderQuickButtons(); },
+                deleteQuickDateSetting: function(idx) { app.data.settings.quickDates.splice(idx,1); app.storage.save(); app.ui.renderQuickButtons(); },
+                exportData: function() {
+                    const a = document.createElement('a');
+                    a.href = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(app.data));
+                    a.download = "pm_backup_"+new Date().toISOString().slice(0,10)+".json";
+                    document.body.appendChild(a); a.click(); a.remove();
+                },
+                importData: function(input) {
+                    const f = input.files[0]; if(!f) return;
+                    const r = new FileReader();
+                    r.onload = e => {
+                        try {
+                            const d = JSON.parse(e.target.result);
+                            if(d.clients && d.issues) { app.data=d; app.storage.save(); app.init(); app.ui.alert(app.t('importSuccess')); }
+                            else app.ui.alert(app.t('importError'));
+                        } catch(x) { app.ui.alert(app.t('readError')); }
+                    };
+                    r.readAsText(f);
+                },
+                setQuickDate: function(days) {
+                    try {
+                        const startVal = document.getElementById('field-start-time').value;
+                        if (!startVal) return app.ui.alert(app.t('pleaseSetStart'));
+                        const [dp, tp] = startVal.split('T'); const [y, m, d] = dp.split('-').map(Number); const [hh, mm] = tp.split(':').map(Number);
+                        const date = new Date(y, m-1, d, hh, mm); date.setDate(date.getDate() + parseInt(days));
+                        const pad = n => String(n).padStart(2, '0');
+                        document.getElementById('field-due-time').value = `${date.getFullYear()}-${pad(date.getMonth()+1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+                    } catch (e) { app.ui.alert("Date error"); }
+                },
+                changeCalDate: function(d) {
+                    const newDate = new Date(app.state.calDate);
+                    if (app.state.calMode === 'month') {
+                        newDate.setMonth(newDate.getMonth() + d);
+                    } else {
+                        newDate.setDate(newDate.getDate() + (d * 7));
+                    }
+                    app.state.calDate = newDate;
+                    app.ui.renderCalendar();
+                },
+                switchCalMode: function(mode) {
+                    app.state.calMode = mode;
+                    const btnBi = document.getElementById('btn-view-biweek');
+                    const btnMo = document.getElementById('btn-view-month');
+                    if(mode === 'biweek') {
+                        btnBi.className = "px-3 py-1.5 text-sm bg-brand-50 text-brand-700 font-medium";
+                        btnMo.className = "px-3 py-1.5 text-sm bg-white text-slate-600 hover:bg-slate-50 border-l border-slate-300";
+                    } else {
+                        btnBi.className = "px-3 py-1.5 text-sm bg-white text-slate-600 hover:bg-slate-50";
+                        btnMo.className = "px-3 py-1.5 text-sm bg-brand-50 text-brand-700 font-medium border-l border-slate-300";
+                    }
+                    app.ui.renderCalendar();
+                }
+            },
+
+            ui: {
+                tags: {
+                    setupListeners: function(f) {
+                        const el = document.getElementById(`input-${f}`);
+                        if(!el) return;
+                        el.addEventListener('keydown', e => { if(e.key==='Enter'){ e.preventDefault(); app.ui.tags.addFromInput(f); } });
+                        // Add on change to catch datalist selections
+                        el.addEventListener('input', e => {
+                            const val = e.target.value;
+                            if(!val) return;
+                            const opts = document.getElementById(`list-${f}s`).options;
+                            for(let i=0; i<opts.length; i++) {
+                                if(opts[i].value === val) { app.ui.tags.addFromInput(f); break; }
+                            }
+                        });
+                    },
+                    addFromInput: function(f) {
+                        const el = document.getElementById(`input-${f}`); const val = el.value.trim();
+                        if(val) { val.split(',').forEach(v=>app.ui.tags.createChip(f,v.trim())); el.value=''; }
+                    },
+                    createChip: function(f, txt) {
+                        if(!txt) return; const c = document.getElementById(`tags-${f}-container`);
+                        const exist = Array.from(c.children).map(x=>x.dataset.value);
+                        if(exist.includes(txt)) return;
+                        const d = document.createElement('div');
+                        d.className = "tag-chip flex items-center bg-brand-100 text-brand-800 text-sm px-3 py-1 rounded-full font-medium border border-brand-200";
+                        d.dataset.value = txt;
+                        d.innerHTML = `<span>${txt}</span><button type="button" onclick="this.parentElement.remove()" class="ml-2 text-brand-500 hover:text-brand-700"><i class="fa-solid fa-times"></i></button>`;
+                        c.appendChild(d);
+                    },
+                    render: function(f, str) {
+                        const c = document.getElementById(`tags-${f}-container`); c.innerHTML='';
+                        if(str) str.split(',').forEach(t=>this.createChip(f, t.trim()));
+                    },
+                    get: function(f) { return Array.from(document.getElementById(`tags-${f}-container`).children).map(x=>x.dataset.value).join(','); }
+                },
+                updateLanguage: function() {
+                    document.querySelectorAll('[data-i18n]').forEach(el => {
+                        const k = el.getAttribute('data-i18n'); if(app.i18n[app.state.lang][k]) el.innerText = app.i18n[app.state.lang][k];
+                    });
+                    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                        const k = el.getAttribute('data-i18n-placeholder'); if(app.i18n[app.state.lang][k]) el.placeholder = app.i18n[app.state.lang][k];
+                    });
+                    
+                    // Update Calendar View buttons manually as they might be toggled class-wise
+                    const btnBi = document.getElementById('btn-view-biweek');
+                    const btnMo = document.getElementById('btn-view-month');
+                    if(btnBi) btnBi.innerText = app.t('viewBiWeek');
+                    if(btnMo) btnMo.innerText = app.t('viewMonth');
+
+                    app.ui.renderQuickButtons();
+                    if(app.state.currentClient) { app.handlers.applyFilter(); app.ui.renderHistory(); app.handlers.updatePeopleDropdowns(); }
+                    app.ui.renderClientList(); 
+                    app.ui.renderCalendar();
+                },
+                alert: function(msg) {
+                    document.getElementById('modal-title').innerText = app.t('sysPrompt');
+                    document.getElementById('modal-message').innerText = msg;
+                    document.getElementById('modal-input').classList.add('hidden');
+                    document.getElementById('modal-btn-cancel').classList.add('hidden');
+                    document.getElementById('modal-btn-confirm').onclick = () => document.getElementById('modal-overlay').classList.add('hidden');
+                    document.getElementById('modal-overlay').classList.remove('hidden');
+                },
+                promptInput: function(t, m, def, cb) {
+                    document.getElementById('modal-title').innerText = t;
+                    document.getElementById('modal-message').innerText = m;
+                    const inp = document.getElementById('modal-input');
+                    inp.classList.remove('hidden'); inp.value = def||'';
+                    document.getElementById('modal-btn-cancel').classList.remove('hidden');
+                    document.getElementById('modal-btn-cancel').onclick = () => document.getElementById('modal-overlay').classList.add('hidden');
+                    document.getElementById('modal-btn-confirm').onclick = () => { cb(inp.value); document.getElementById('modal-overlay').classList.add('hidden'); };
+                    document.getElementById('modal-overlay').classList.remove('hidden'); inp.focus();
+                },
+                confirmDelete: function(n, cb) {
+                    document.getElementById('modal-title').innerText = app.t('delTitle');
+                    document.getElementById('modal-message').innerHTML = app.t('delMsg', {n});
+                    const inp = document.getElementById('modal-input'); inp.classList.remove('hidden'); inp.value='';
+                    document.getElementById('modal-btn-cancel').classList.remove('hidden');
+                    document.getElementById('modal-btn-cancel').onclick = () => document.getElementById('modal-overlay').classList.add('hidden');
+                    document.getElementById('modal-btn-confirm').onclick = () => {
+                        if(inp.value===n) { cb(); document.getElementById('modal-overlay').classList.add('hidden'); }
+                    };
+                    document.getElementById('modal-overlay').classList.remove('hidden');
+                },
+                confirmAction: function(t, m, ok, cancel) {
+                    document.getElementById('modal-title').innerText = t;
+                    document.getElementById('modal-message').innerText = m;
+                    document.getElementById('modal-input').classList.add('hidden');
+                    document.getElementById('modal-btn-cancel').classList.remove('hidden');
+                    document.getElementById('modal-btn-cancel').onclick = () => { if(cancel) cancel(); document.getElementById('modal-overlay').classList.add('hidden'); };
+                    document.getElementById('modal-btn-confirm').onclick = () => { if(ok) ok(); document.getElementById('modal-overlay').classList.add('hidden'); };
+                    document.getElementById('modal-overlay').classList.remove('hidden');
+                },
+                switchWorkspaceTab: function(t, btn) {
+                    ['list','add','history'].forEach(x => document.getElementById(`tab-${x}`).classList.add('hidden'));
+                    document.getElementById(`tab-${t}`).classList.remove('hidden');
+                    document.querySelectorAll('.ws-nav-btn').forEach(b => {
+                        b.classList.remove('text-brand-600','text-slate-400'); b.classList.add('text-slate-400');
+                        if(b.dataset.tab===t) { b.classList.remove('text-slate-400'); b.classList.add('text-brand-600'); }
+                    });
+                    if(t==='list') { app.handlers.updatePeopleDropdowns(); app.handlers.applyFilter(); }
+                    if(t==='add' && btn && btn.classList.contains('ws-nav-btn')) {
+                        document.getElementById('issue-form').reset();
+                        document.getElementById('edit-issue-id').value = '';
+                        document.getElementById('editor-title').innerText = app.t('addIssue');
+                        document.getElementById('image-preview-container').innerHTML = '';
+                        document.getElementById('tags-originator-container').innerHTML = '';
+                        document.getElementById('tags-assignee-container').innerHTML = '';
+                        document.getElementById('field-client-display').value = app.state.currentClient;
+                        const now = new Date(); now.setMinutes(now.getMinutes()-now.getTimezoneOffset());
+                        document.getElementById('field-start-time').value = now.toISOString().slice(0,16);
+                        app.handlers.updatePeopleDropdowns(); app.ui.renderQuickButtons();
+                    }
+                    if(t==='history') app.ui.renderHistory();
+                },
+                switchConfigTab: function(tab) {
+                    document.getElementById('tab-btn-mgmt').classList.toggle('border-brand-600', tab === 'mgmt');
+                    document.getElementById('tab-btn-mgmt').classList.toggle('text-brand-600', tab === 'mgmt');
+                    document.getElementById('tab-btn-mgmt').classList.toggle('border-transparent', tab !== 'mgmt');
+                    document.getElementById('tab-btn-mgmt').classList.toggle('text-slate-500', tab !== 'mgmt');
+
+                    document.getElementById('tab-btn-cal').classList.toggle('border-brand-600', tab === 'cal');
+                    document.getElementById('tab-btn-cal').classList.toggle('text-brand-600', tab === 'cal');
+                    document.getElementById('tab-btn-cal').classList.toggle('border-transparent', tab !== 'cal');
+                    document.getElementById('tab-btn-cal').classList.toggle('text-slate-500', tab !== 'cal');
+
+                    document.getElementById('config-content-mgmt').classList.toggle('hidden', tab !== 'mgmt');
+                    document.getElementById('config-content-cal').classList.toggle('hidden', tab !== 'cal');
+
+                    if(tab === 'cal') {
+                        app.ui.renderCalendarFilters();
+                        app.ui.renderCalendar();
+                    }
+                },
+                renderCalendarFilters: function() {
+                    if(!app.data.clients) return;
+                    
+                    // Filter clients to only those with incomplete issues
+                    const activeClients = app.data.clients.filter(c => 
+                        app.data.issues.some(i => i.client === c.id && !i.completed)
+                    );
+
+                    const targets = [...new Set(activeClients.map(c => c.target))].sort();
+                    const tSel = document.getElementById('cal-filter-target');
+                    tSel.innerHTML = `<option value="all">${app.t('all')} Targets</option>`;
+                    targets.forEach(t => { const op = document.createElement('option'); op.value = t; op.innerText = t; tSel.appendChild(op); });
+                    
+                    const projects = [...new Set(activeClients.map(c => c.project))].sort();
+                    const pSel = document.getElementById('cal-filter-project');
+                    pSel.innerHTML = `<option value="all">${app.t('all')} Projects</option>`;
+                    projects.forEach(p => { const op = document.createElement('option'); op.value = p; op.innerText = p; pSel.appendChild(op); });
+                    
+                    if(app.state.calendarFilter) { 
+                        // Preserve selection if valid, else reset to all
+                        const lastT = app.state.calendarFilter.target || 'all';
+                        const lastP = app.state.calendarFilter.project || 'all';
+                        
+                        tSel.value = (lastT === 'all' || targets.includes(lastT)) ? lastT : 'all';
+                        pSel.value = (lastP === 'all' || projects.includes(lastP)) ? lastP : 'all';
+                    }
+                },
+                renderCalendar: function() {
+                    const date = app.state.calDate;
+                    const mode = app.state.calMode;
+                    const tFilter = document.getElementById('cal-filter-target').value;
+                    const pFilter = document.getElementById('cal-filter-project').value;
+                    app.state.calendarFilter = { target: tFilter, project: pFilter };
+                    const grid = document.getElementById('calendar-grid');
+                    grid.innerHTML = '';
+                    const header = document.getElementById('calendar-header');
+                    const weekDays = app.i18n[app.state.lang].weekdays;
+                    header.innerHTML = '';
+                    weekDays.forEach(day => {
+                        header.innerHTML += `<div class="text-xs font-bold text-slate-500 py-1">${day}</div>`;
+                    });
+
+                    const activeIssues = app.data.issues.filter(i => !i.completed && i.dueTime);
+                    let firstDayDate, daysToRender;
+
+                    if (mode === 'month') {
+                        const year = date.getFullYear();
+                        const month = date.getMonth();
+                        const monthName = app.i18n[app.state.lang].months[month];
+                        document.getElementById('cal-title').innerText = app.state.lang === 'zh' ? `${year}年 ${monthName}` : `${monthName} ${year}`;
+                        
+                        firstDayDate = new Date(year, month, 1);
+                        const lastDay = new Date(year, month + 1, 0);
+                        daysToRender = lastDay.getDate();
+                        const startingDay = firstDayDate.getDay(); 
+
+                        for(let i = 0; i < startingDay; i++) {
+                            const cell = document.createElement('div');
+                            cell.className = "calendar-cell bg-slate-50";
+                            grid.appendChild(cell);
+                        }
+                    } else {
+                        const day = date.getDay();
+                        firstDayDate = new Date(date);
+                        firstDayDate.setDate(date.getDate() - day); 
+                        
+                        // 3 Weeks Logic
+                        firstDayDate.setDate(firstDayDate.getDate() - 7);
+                        daysToRender = 21;
+                        
+                        const endDate = new Date(firstDayDate);
+                        endDate.setDate(firstDayDate.getDate() + 20);
+                        
+                        const m1 = app.i18n[app.state.lang].months[firstDayDate.getMonth()];
+                        const m2 = app.i18n[app.state.lang].months[endDate.getMonth()];
+                        const d1 = firstDayDate.getDate();
+                        const d2 = endDate.getDate();
+                        
+                        document.getElementById('cal-title').innerText = app.state.lang === 'zh' ? 
+                            `${m1} ${d1}日 - ${m2} ${d2}日` : 
+                            `${m1.substring(0,3)} ${d1} - ${m2.substring(0,3)} ${d2}`;
+                    }
+
+                    for(let d = 0; d < daysToRender; d++) {
+                        const currDate = new Date(firstDayDate);
+                        currDate.setDate(firstDayDate.getDate() + d);
+
+                        const cell = document.createElement('div');
+                        cell.className = "calendar-cell border-t border-l border-slate-100 hover:bg-slate-50 transition overflow-y-auto";
+                        if (currDate.toDateString() === new Date().toDateString()) cell.classList.add("bg-blue-50");
+
+                        const dateNum = document.createElement('div');
+                        dateNum.className = "text-xs font-bold text-slate-400 mb-1 text-right";
+                        dateNum.innerText = currDate.getDate();
+                        cell.appendChild(dateNum);
+
+                        const currentDayStr = `${currDate.getFullYear()}-${String(currDate.getMonth()+1).padStart(2,'0')}-${String(currDate.getDate()).padStart(2,'0')}`;
+                        
+                        const daysIssues = activeIssues.filter(i => {
+                            const clientInfo = app.data.clients.find(c => c.id === i.client);
+                            if(!clientInfo) return false;
+                            if(tFilter !== 'all' && clientInfo.target !== tFilter) return false;
+                            if(pFilter !== 'all' && clientInfo.project !== pFilter) return false;
+                            return i.dueTime.startsWith(currentDayStr);
+                        });
+
+                        daysIssues.forEach(issue => {
+                            const clientInfo = app.data.clients.find(c => c.id === issue.client);
+                            const label = `[${clientInfo ? clientInfo.target : '?'}-${clientInfo ? clientInfo.project : '?'}] ${issue.title}`;
+                            const chip = document.createElement('div');
+                            
+                            const isOverdue = app.utils.isOverdue(issue.dueTime, issue.completed);
+                            let bgClass = "bg-slate-200 text-slate-700";
+                            if (isOverdue) bgClass = "bg-red-600 text-white border-l-2 border-red-800 shadow-sm"; 
+                            else if(issue.urgency === 'critical') bgClass = "bg-red-100 text-red-800 border-l-2 border-red-600";
+                            else if(issue.urgency === 'high') bgClass = "bg-orange-100 text-orange-800 border-l-2 border-orange-500";
+                            else if(issue.urgency === 'medium') bgClass = "bg-yellow-100 text-yellow-800 border-l-2 border-yellow-500";
+                            else if(issue.urgency === 'low') bgClass = "bg-blue-100 text-blue-800 border-l-2 border-blue-500";
+                            
+                            chip.className = `text-[10px] p-1 mb-1 rounded leading-tight cursor-pointer hover:opacity-80 break-words whitespace-normal ${bgClass}`;
+                            chip.title = label; 
+                            chip.innerText = label;
+                            chip.onclick = (e) => {
+                                e.stopPropagation();
+                                app.ui.showIssueDetail(issue.id);
+                            };
+                            cell.appendChild(chip);
+                        });
+                        grid.appendChild(cell);
+                    }
+                },
+                renderOverdueAlert: function(c) {
+                    const el = document.getElementById('overdue-alert-container');
+                    if(c>0) { el.classList.remove('hidden'); document.getElementById('overdue-alert-text').innerText=app.t('overdueText',{n:c}); }
+                    else el.classList.add('hidden');
+                },
+                renderUpcomingAlert: function(c) {
+                    const el = document.getElementById('upcoming-alert-container');
+                    if(c>0) { el.classList.remove('hidden'); document.getElementById('upcoming-alert-text').innerText=app.t('upcomingText',{n:c}); }
+                    else el.classList.add('hidden');
+                },
+                renderHistory: function() {
+                    const l = document.getElementById('history-list'); l.innerHTML = '';
+                    const logs = app.data.history.filter(h=>h.client===app.state.currentClient);
+                    if(!logs.length) { l.innerHTML=`<li class="p-4 text-center text-slate-400 text-sm">${app.t('noHistory')}</li>`; return; }
+                    logs.forEach(h => {
+                        let msg = '';
+                        if(typeof h.details==='object') {
+                            if(h.action==='logModified'||h.action==='logStatusChange') {
+                                const chg = h.details.changes.map(c => {
+                                    if(c.type==='simple') return app.t(c.labelKey||c.label);
+                                    const field = app.t(c.field);
+                                    let ov = c.old, nv = c.new;
+                                    if(c.key==='urgency') { ov=app.t('urgency'+ov.charAt(0).toUpperCase()+ov.slice(1)); nv=app.t('urgency'+nv.charAt(0).toUpperCase()+nv.slice(1)); }
+                                    if(c.key==='completed') { ov=ov?app.t('statusCompleted'):app.t('statusIncomplete'); nv=nv?app.t('statusCompleted'):app.t('statusIncomplete'); }
+                                    if(c.old==='true') ov=app.t('statusCompleted'); if(c.old==='false') ov=app.t('statusIncomplete');
+                                    if(c.new==='true') nv=app.t('statusCompleted'); if(c.new==='false') nv=app.t('statusIncomplete');
+                                    return `${field}: ${ov} -> ${nv}`;
+                                });
+                                msg = `#${h.details.seqId} ${h.details.title||''}: ${chg.join('; ')}`;
+                            } else msg = `#${h.details.seqId}: ${h.details.title}`;
+                        } else msg = h.details;
+                        l.innerHTML += `<li class="p-4 hover:bg-slate-50"><div class="flex justify-between text-xs text-slate-400 mb-1"><span>${app.utils.formatDate(h.time)}</span><span class="font-bold text-brand-600">${app.t(h.action)}</span></div><p class="text-sm text-slate-700 whitespace-pre-wrap">${msg}</p></li>`;
+                    });
+                },
+                renderIssueList: function(list) {
+                    const c = document.getElementById('issue-list-container'); c.innerHTML='';
+                    if(!list.length) { c.innerHTML=`<div class="text-center py-10 text-slate-400">${app.t('noIssues')}</div>`; return; }
+                    list.forEach(i => {
+                        const od = app.utils.isOverdue(i.dueTime, i.completed);
+                        const uc = app.CONSTANTS.URGENCY[i.urgency];
+                        const ul = app.t(i.urgency==='ref'?'urgencyRef':'urgency'+i.urgency.charAt(0).toUpperCase()+i.urgency.slice(1));
+                        let bs = "";
+                        if(od) bs="border-l-4 border-l-red-600";
+                        else if(i.urgency==='critical') bs="border-l-4 border-l-red-600";
+                        else if(i.urgency==='high') bs="border-l-4 border-l-orange-500";
+                        else if(i.urgency==='medium') bs="border-l-4 border-l-yellow-500";
+                        else if(i.urgency==='low') bs="border-l-4 border-l-blue-500";
+                        else bs="border-l-4 border-l-slate-400";
+                        
+                        const div = document.createElement('div');
+                        div.className = `bg-white rounded-lg shadow-sm border border-slate-200 p-4 relative ${i.completed?'opacity-75':''} hover:shadow-md cursor-pointer ${bs}`;
+                        div.onclick = e => { if(e.target.type!=='checkbox') app.ui.showIssueDetail(i.id); };
+                        div.innerHTML = `
+                            <div class="flex items-start gap-3">
+                                <div class="pt-1" onclick="event.stopPropagation()"><input type="checkbox" ${i.completed?'checked':''} onchange="app.handlers.toggleComplete('${i.id}',this)" class="w-5 h-5 text-brand-600 rounded cursor-pointer"></div>
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-xs font-bold text-slate-400">#${i.seqId}</span>
+                                        <span class="px-1.5 py-0.5 rounded text-[10px] font-bold ${uc.badge}">${ul}</span>
+                                        ${od ? `<span class="px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-100 text-red-700 animate-pulse">${app.t('overdueTag')}</span>` : ''}
+                                    </div>
+                                    <h3 class="text-base font-bold ${i.completed?'text-slate-400 line-through':(od?'text-red-700':'text-slate-800')} truncate">${i.title}</h3>
+                                    <div class="mt-2 flex flex-col gap-1 text-xs text-slate-500">
+                                        <div class="flex items-center min-w-0">
+                                            <i class="fa-regular fa-calendar mr-2 w-4 text-center flex-none"></i>
+                                            <span class="truncate">${i.dueTime?app.utils.formatDate(i.dueTime).split(' ')[0]:'-'}</span>
+                                        </div>
+                                        <div class="flex items-center min-w-0" title="Org: ${i.originator||'-'}">
+                                            <i class="fa-solid fa-user-pen mr-2 w-4 text-center text-brand-600 flex-none"></i>
+                                            <span class="truncate">Org: ${i.originator||'-'}</span>
+                                        </div>
+                                        <div class="flex items-center min-w-0" title="To: ${i.assignee||'-'}">
+                                            <i class="fa-solid fa-user-check mr-2 w-4 text-center text-green-600 flex-none"></i>
+                                            <span class="truncate">To: ${i.assignee||'-'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="flex flex-col items-end pl-2">${i.images&&i.images.length>0?'<i class="fa-regular fa-image text-slate-400 mt-1"></i>':''}</div>
+                            </div>
+                        `;
+                        c.appendChild(div);
+                    });
+                },
+                showIssueDetail: function(id) {
+                    const i = app.data.issues.find(x=>x.id===id); if(!i) return;
+                    const uc = app.CONSTANTS.URGENCY[i.urgency];
+                    const ul = app.t(i.urgency==='ref'?'urgencyRef':'urgency'+i.urgency.charAt(0).toUpperCase()+i.urgency.slice(1));
+                    const content = document.getElementById('detail-content');
+                    const imgs = (i.images||[]).map(s=>`<img src="${s}" class="h-24 w-24 object-cover rounded border border-slate-200 cursor-pointer hover:opacity-80" onclick="app.ui.viewImage(this.src)">`).join('');
+                    content.innerHTML = `
+                        <div class="space-y-4">
+                            <div class="border-b border-slate-100 pb-3"><span class="text-xs font-bold text-slate-400">#${i.seqId}</span><h2 class="text-xl font-bold text-slate-800 mt-1 break-words">${i.title}</h2><div class="mt-2 space-x-2"><span class="px-2 py-1 rounded text-xs font-bold ${uc.badge}">${ul}</span><span class="px-2 py-1 rounded text-xs font-bold ${i.completed?'bg-green-100 text-green-800':'bg-slate-100 text-slate-600'}">${i.completed?app.t('statusCompleted'):app.t('statusIncomplete')}</span></div></div>
+                            <div class="grid grid-cols-2 gap-4 text-sm"><div><label class="text-xs text-slate-400">${app.t('startTime')}</label><div class="font-medium">${app.utils.formatDate(i.startTime)}</div></div><div><label class="text-xs text-slate-400">${app.t('dueTime')}</label><div class="font-medium ${app.utils.isOverdue(i.dueTime,i.completed)?'text-red-600 font-bold':''}">${app.utils.formatDate(i.dueTime)}</div></div><div><label class="text-xs text-slate-400">${app.t('originator')}</label><div class="font-medium break-words">${i.originator||'-'}</div></div><div><label class="text-xs text-slate-400">${app.t('assignee')}</label><div class="font-medium break-words">${i.assignee||'-'}</div></div></div>
+                            <div class="bg-slate-50 p-3 rounded"><p class="text-sm whitespace-pre-wrap">${i.notes||'-'}</p></div>
+                            ${imgs?`<div><div class="flex flex-wrap gap-2">${imgs}</div></div>`:''}
+                        </div>
+                    `;
+                    document.getElementById('btn-edit-issue').onclick = () => app.handlers.editIssue(id);
+                    document.getElementById('btn-delete-issue').onclick = () => app.handlers.deleteIssue(id);
+                    document.getElementById('detail-modal').classList.remove('hidden');
+                },
+                viewImage: function(src) { document.getElementById('image-modal-src').src=src; document.getElementById('image-modal').classList.remove('hidden'); },
+                renderImagePreview: function(b, c) {
+                    const d = document.createElement('div');
+                    d.className="relative group aspect-square bg-slate-100 rounded overflow-hidden border border-slate-200";
+                    d.innerHTML=`<img src="${b}" class="w-full h-full object-cover"><button type="button" onclick="this.parentElement.remove()" class="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center opacity-90 hover:opacity-100"><i class="fa-solid fa-times text-xs"></i></button><input type="hidden" name="image_data[]" value="${b}">`;
+                    c.appendChild(d);
+                },
+                renderClientList: function() {
+                    const tb = document.getElementById('client-list-tbody'); tb.innerHTML='';
+                    if(!app.data.clients) return;
+                    
+                    // 1. Prepare data with statistics first
+                    const clientData = app.data.clients.map(c => {
+                        const all = app.data.issues.filter(i=>i.client===c.id);
+                        const comp = all.filter(i=>i.completed).length;
+                        const od = all.filter(i=>app.utils.isOverdue(i.dueTime,i.completed)).length;
+                        
+                        // Upcoming Calculation
+                        const now = new Date();
+                        const warningDate = new Date();
+                        const warningDays = parseInt(c.warningDays || 3);
+                        warningDate.setDate(now.getDate() + warningDays);
+                        const upcoming = all.filter(i => 
+                            !i.completed && 
+                            i.dueTime && 
+                            new Date(i.dueTime) >= now && 
+                            new Date(i.dueTime) <= warningDate
+                        ).length;
+
+                        const rate = all.length===0?0:Math.round((comp/all.length)*100);
+                        
+                        return {
+                            ...c,
+                            stats: { all: all.length, comp, od, upcoming, rate }
+                        };
+                    });
+
+                    // 2. Sort based on state
+                    const { column, order } = app.state.clientSort;
+                    
+                    clientData.sort((a, b) => {
+                        let valA, valB;
+                        
+                        switch(column) {
+                            case 'target': valA = a.target.toLowerCase(); valB = b.target.toLowerCase(); break;
+                            case 'project': valA = a.project.toLowerCase(); valB = b.project.toLowerCase(); break;
+                            case 'warningDays': valA = parseInt(a.warningDays || 0); valB = parseInt(b.warningDays || 0); break;
+                            case 'overdue': valA = a.stats.od; valB = b.stats.od; break;
+                            case 'upcoming': valA = a.stats.upcoming; valB = b.stats.upcoming; break;
+                            case 'total': valA = a.stats.all; valB = b.stats.all; break;
+                            case 'done': valA = a.stats.comp; valB = b.stats.comp; break;
+                            case 'rate': valA = a.stats.rate; valB = b.stats.rate; break;
+                            default: return 0;
+                        }
+
+                        if (valA < valB) return order === 'asc' ? -1 : 1;
+                        if (valA > valB) return order === 'asc' ? 1 : -1;
+                        
+                        // Secondary sort by target name to keep it stable
+                        return a.target.localeCompare(b.target);
+                    });
+
+                    // 3. Update Header Icons
+                    document.querySelectorAll('th.sortable').forEach(th => {
+                        th.classList.remove('active', 'bg-slate-100');
+                        const icon = th.querySelector('.sort-icon');
+                        icon.className = 'fa-solid fa-sort sort-icon'; // Reset to default
+                    });
+
+                    const activeTh = document.querySelector(`th[data-col="${column}"]`);
+                    if(activeTh) {
+                        activeTh.classList.add('active', 'bg-slate-100');
+                        const icon = activeTh.querySelector('.sort-icon');
+                        icon.className = order === 'asc' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
+                    }
+
+                    // 4. Render Rows
+                    clientData.forEach(c => {
+                        let rc = 'text-red-500'; if(c.stats.rate>=50) rc='text-yellow-500'; if(c.stats.rate>=80) rc='text-green-500';
+                        
+                        const safeId = c.id.replace(/'/g, "\\'");
+                        
+                        tb.innerHTML += `<tr>
+                            <td class="px-4 py-3 text-sm font-medium text-slate-900">
+                                <div class="break-words whitespace-normal leading-tight">${c.target}</div>
+                            </td>
+                            <td class="px-4 py-3 text-sm text-slate-500">
+                                <div class="break-words whitespace-normal leading-tight">${c.project}</div>
+                            </td>
+                            <td class="px-4 py-3 text-center text-sm font-medium text-slate-500">${c.warningDays}</td>
+                            <td class="px-4 py-3 text-center text-sm font-bold text-red-600">${c.stats.od>0?c.stats.od:'-'}</td>
+                            <td class="px-4 py-3 text-center text-sm font-bold text-yellow-600">${c.stats.upcoming>0?c.stats.upcoming:'-'}</td>
+                            <td class="px-4 py-3 text-center text-sm text-slate-500">${c.stats.all}</td>
+                            <td class="px-4 py-3 text-center text-sm text-green-600">${c.stats.comp}</td>
+                            <td class="px-4 py-3 text-center text-sm font-bold ${rc}">${c.stats.rate}%</td>
+                            <td class="px-4 py-3 text-right">
+                                <button onclick="app.handlers.editClientInfo('${safeId}')" class="text-blue-600 text-sm hover:underline mr-2">${app.t('editBtn')}</button>
+                                <button onclick="app.handlers.deleteClient('${safeId}')" class="text-red-600 text-sm hover:underline">${app.t('delBtn')}</button>
+                            </td>
+                        </tr>`;
+                    });
+                },
+                renderQuickButtons: function() {
+                    const cc = document.getElementById('quick-date-config'); cc.innerHTML='';
+                    app.data.settings.quickDates.forEach((s,i) => {
+                        cc.innerHTML+=`<div class="flex gap-2 items-center mb-2 flex-wrap sm:flex-nowrap"><div class="flex-1 flex gap-2 w-full sm:w-auto"><input type="text" value="${s.labelEn||''}" placeholder="Label (EN)" class="w-full rounded border-slate-300 p-1 text-sm" onchange="app.handlers.updateQuickDateSetting(${i},'labelEn',this.value)"><input type="text" value="${s.labelZh||''}" placeholder="標籤 (中)" class="w-full rounded border-slate-300 p-1 text-sm" onchange="app.handlers.updateQuickDateSetting(${i},'labelZh',this.value)"></div><div class="flex gap-2 items-center w-full sm:w-auto justify-end"><input type="number" value="${s.days}" class="w-16 rounded border-slate-300 p-1 text-sm text-center" onchange="app.handlers.updateQuickDateSetting(${i},'days',this.value)"><button onclick="app.handlers.deleteQuickDateSetting(${i})" class="text-red-500 px-2"><i class="fa-solid fa-trash"></i></button></div></div>`;
+                    });
+                    const bc = document.getElementById('quick-date-buttons');
+                    if(bc) {
+                        bc.innerHTML='';
+                        app.data.settings.quickDates.forEach(s => {
+                            const b = document.createElement('button'); b.type='button';
+                            b.className="px-2 py-1 bg-brand-50 text-brand-600 text-xs rounded border border-brand-200 hover:bg-brand-100 transition";
+                            b.innerText = app.state.lang==='zh'?(s.labelZh||s.labelEn):(s.labelEn||s.labelZh);
+                            b.onclick = () => app.handlers.setQuickDate(s.days);
+                            bc.appendChild(b);
+                        });
+                    }
+                }
+            },
+            utils: {
+                uuid: () => Date.now().toString(36)+Math.random().toString(36).substr(2),
+                formatDate: s => s ? `${new Date(s).getFullYear()}/${(new Date(s).getMonth()+1).toString().padStart(2,'0')}/${new Date(s).getDate().toString().padStart(2,'0')} ${new Date(s).getHours().toString().padStart(2,'0')}:${new Date(s).getMinutes().toString().padStart(2,'0')}` : '-',
+                isOverdue: (d,c) => !c && d && new Date(d) < new Date(),
+                checkLength: (str, max) => {
+                    if (!str) return true;
+                    // Replace non-ASCII chars with 2 chars to simulate visual width
+                    const len = str.replace(/[^\x00-\xff]/g, "**").length;
+                    return len <= max;
+                },
+                compressImage: f => new Promise((resolve, reject) => {
+                    if (!f.type.startsWith('image/')) {
+                        reject(new Error("Not an image file"));
+                        return;
+                    }
+                    const reader = new FileReader();
+                    reader.readAsDataURL(f);
+                    reader.onload = event => {
+                        const img = new Image();
+                        img.src = event.target.result;
+                        img.onload = () => {
+                            const MAX_WIDTH = 800;
+                            const MAX_HEIGHT = 800;
+                            let width = img.width;
+                            let height = img.height;
+            
+                            if (width > height) {
+                                if (width > MAX_WIDTH) {
+                                    height *= MAX_WIDTH / width;
+                                    width = MAX_WIDTH;
+                                }
+                            } else {
+                                if (height > MAX_HEIGHT) {
+                                    width *= MAX_HEIGHT / height;
+                                    height = MAX_HEIGHT;
+                                }
+                            }
+            
+                            const canvas = document.createElement('canvas');
+                            canvas.width = width;
+                            canvas.height = height;
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(img, 0, 0, width, height);
+                            resolve(canvas.toDataURL('image/jpeg', 0.5));
+                        }
+                        img.onerror = () => reject(new Error("Image load error"));
+                    }
+                    reader.onerror = () => reject(new Error("File read error"));
+                })
+            }
+        };
+        window.addEventListener('DOMContentLoaded', () => app.init());
+    </script>
+</body>
+</html>
