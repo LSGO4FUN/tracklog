@@ -195,17 +195,17 @@
                     EN / 中
                 </button>
                 <div class="flex space-x-1 border-l border-slate-200 pl-2">
-                    <button onclick="app.router.go('config')" class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition flex items-center gap-1" title="Settings">
-                        <i class="fa-solid fa-gear text-sm"></i>
-                        <span class="text-xs font-medium" data-i18n="btnSettings">Settings</span>
+                    <button onclick="app.router.go('config')" class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition flex items-center gap-1 group" title="Settings">
+                        <i class="fa-solid fa-gear text-sm group-hover:text-brand-600"></i>
+                        <span class="text-xs font-medium whitespace-nowrap" data-i18n="btnSettings">Settings</span>
                     </button>
-                    <button onclick="app.handlers.exportData()" class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition flex items-center gap-1" title="Export">
-                        <i class="fa-solid fa-file-export text-sm"></i>
-                        <span class="text-xs font-medium" data-i18n="btnExport">Export</span>
+                    <button onclick="app.handlers.exportData()" class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition flex items-center gap-1 group" title="Export">
+                        <i class="fa-solid fa-file-export text-sm group-hover:text-brand-600"></i>
+                        <span class="text-xs font-medium whitespace-nowrap" data-i18n="btnExport">Export</span>
                     </button>
-                    <label class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition cursor-pointer flex items-center gap-1" title="Import">
-                        <i class="fa-solid fa-file-import text-sm"></i>
-                        <span class="text-xs font-medium" data-i18n="btnImport">Import</span>
+                    <label class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition cursor-pointer flex items-center gap-1 group" title="Import">
+                        <i class="fa-solid fa-file-import text-sm group-hover:text-brand-600"></i>
+                        <span class="text-xs font-medium whitespace-nowrap" data-i18n="btnImport">Import</span>
                         <input type="file" id="importFile" class="hidden" accept=".json" onchange="app.handlers.importData(this)">
                     </label>
                 </div>
@@ -364,20 +364,33 @@
                                 <label class="block text-sm font-semibold text-slate-700 mb-1"><span data-i18n="issueTitle">Issue Title</span> <span class="text-red-500">*</span></label>
                                 <input type="text" id="field-title" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" placeholder="Enter summary..." data-i18n-placeholder="summaryPlaceholder" required>
                             </div>
+                            <!-- Modified Originator Input -->
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="originator">Originator</label>
                                 <div class="flex flex-wrap gap-2 mb-2 min-h-[1.5rem]" id="tags-originator-container"></div>
                                 <div class="flex gap-2">
                                     <button type="button" onclick="app.ui.tags.addFromInput('originator')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-300 hover:bg-slate-200"><i class="fa-solid fa-plus"></i></button>
                                     <div class="relative flex-1 min-w-0">
-                                        <input type="text" id="input-originator" list="list-originators" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 pr-8 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
-                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400">
-                                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                                        <!-- Text Input for manual entry -->
+                                        <input type="text" id="input-originator" list="list-originators" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 pr-10 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                        
+                                        <!-- Visual Arrow Area -->
+                                        <div class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 bg-transparent pointer-events-none border-l border-transparent">
+                                            <i class="fa-solid fa-chevron-down text-sm"></i>
                                         </div>
+
+                                        <!-- Hidden Native Select Trigger (Covers only the right arrow area) -->
+                                        <select id="dropdown-originator" 
+                                            class="absolute inset-y-0 right-0 w-12 opacity-0 cursor-pointer"
+                                            onchange="if(this.value){ app.ui.tags.createChip('originator', this.value); this.value=''; }">
+                                            <!-- Options populated by JS -->
+                                        </select>
                                     </div>
                                 </div>
                                 <datalist id="list-originators"></datalist>
                             </div>
+
+                            <!-- Modified Due Time Section (No changes here, just context) -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label class="block text-sm font-semibold text-slate-700 mb-1"><span data-i18n="startTime">Start Time</span> <span class="text-red-500">*</span></label>
@@ -389,16 +402,28 @@
                                     <div class="mt-2 flex flex-wrap gap-2" id="quick-date-buttons"></div>
                                 </div>
                             </div>
+
+                            <!-- Modified Assignee Input -->
                             <div>
                                 <label class="block text-sm font-semibold text-slate-700 mb-1" data-i18n="assignee">Assignee</label>
                                 <div class="flex flex-wrap gap-2 mb-2 min-h-[1.5rem]" id="tags-assignee-container"></div>
                                 <div class="flex gap-2">
                                     <button type="button" onclick="app.ui.tags.addFromInput('assignee')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-300 hover:bg-slate-200"><i class="fa-solid fa-plus"></i></button>
                                     <div class="relative flex-1 min-w-0">
-                                        <input type="text" id="input-assignee" list="list-assignees" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 pr-8 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
-                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400">
-                                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                                        <!-- Text Input -->
+                                        <input type="text" id="input-assignee" list="list-assignees" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 pr-10 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                        
+                                        <!-- Visual Arrow -->
+                                        <div class="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 bg-transparent pointer-events-none border-l border-transparent">
+                                            <i class="fa-solid fa-chevron-down text-sm"></i>
                                         </div>
+
+                                        <!-- Hidden Native Select Trigger -->
+                                        <select id="dropdown-assignee" 
+                                            class="absolute inset-y-0 right-0 w-12 opacity-0 cursor-pointer"
+                                            onchange="if(this.value){ app.ui.tags.createChip('assignee', this.value); this.value=''; }">
+                                            <!-- Options populated by JS -->
+                                        </select>
                                     </div>
                                 </div>
                                 <datalist id="list-assignees"></datalist>
@@ -935,14 +960,38 @@
                     });
                     const sortedO = Array.from(originators).filter(x=>x).sort((a,b)=>String(a).localeCompare(String(b)));
                     const sortedA = Array.from(assignees).filter(x=>x).sort((a,b)=>String(a).localeCompare(String(b)));
+                    
+                    // Populate Datalists & Hidden Selects
                     const pop = (id, list) => {
-                        const dl = document.getElementById(id); 
-                        if(dl) {
-                            dl.innerHTML = '';
-                            list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; dl.appendChild(o);} });
+                        const el = document.getElementById(id); 
+                        if(el) {
+                            el.innerHTML = '';
+                            
+                            // Add placeholder for select triggers
+                            if(id.startsWith('dropdown')) {
+                                const empty = document.createElement('option');
+                                empty.value = "";
+                                empty.text = "";
+                                empty.disabled = true;
+                                empty.selected = true;
+                                el.appendChild(empty);
+                            }
+
+                            list.forEach(p => { 
+                                if(p){ 
+                                    const o = document.createElement('option'); 
+                                    o.value = p; 
+                                    // For selects, innerText is vital
+                                    if(id.startsWith('dropdown')) o.innerText = p;
+                                    el.appendChild(o);
+                                } 
+                            });
                         }
                     };
-                    pop('list-originators', sortedO); pop('list-assignees', sortedA);
+                    pop('list-originators', sortedO); 
+                    pop('list-assignees', sortedA);
+                    pop('dropdown-originator', sortedO); // New native select trigger
+                    pop('dropdown-assignee', sortedA);   // New native select trigger
                     
                     const fillFilter = (id, list) => {
                         const el = document.getElementById(id);
