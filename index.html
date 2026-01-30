@@ -178,7 +178,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
 
     <!-- Global Header -->
-    <header class="bg-white shadow-sm z-30 flex-none border-b border-slate-200">
+    <header class="bg-white shadow-sm z-50 flex-none border-b border-slate-200 relative">
         <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
             <h1 class="text-lg font-bold text-brand-700 tracking-tight flex items-center cursor-pointer" onclick="app.router.go('landing')">
                 <i class="fa-solid fa-layer-group mr-2"></i>
@@ -242,7 +242,7 @@
 
         <!-- View: Workspace -->
         <section id="view-workspace" class="h-full flex flex-col hidden fade-in">
-            <div class="bg-brand-50 border-b border-brand-100 px-4 py-2 flex justify-between items-center flex-none z-20">
+            <div class="bg-brand-50 border-b border-brand-100 px-4 py-2 flex justify-between items-center flex-none z-20 relative">
                 <div class="flex items-center text-brand-800">
                     <i class="fa-solid fa-building-circle-check mr-2"></i>
                     <span class="font-bold text-sm" id="workspace-client-name">Current Target</span>
@@ -272,11 +272,16 @@
                         </div>
                     </div>
 
-                    <!-- Filters -->
+                    <!-- Filters & Stats -->
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-3">
                         <div class="flex flex-wrap gap-2 items-center justify-between mb-2">
                             <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wider" data-i18n="filters">Filters</h3>
-                            <button onclick="document.getElementById('advanced-filters').classList.toggle('hidden')" class="text-xs text-brand-600 hover:underline">
+                            <!-- Completion Rate Stat -->
+                            <div id="completion-rate-badge" class="flex items-center bg-blue-50 text-blue-700 px-2 py-1 rounded border border-blue-100 transition-colors">
+                                <i class="fa-solid fa-chart-pie mr-1.5 text-xs"></i>
+                                <span class="text-xs font-bold" id="current-completion-rate">0%</span>
+                            </div>
+                            <button onclick="document.getElementById('advanced-filters').classList.toggle('hidden')" class="text-xs text-brand-600 hover:underline ml-auto">
                                 <span data-i18n="advanced">Advanced</span> <i class="fa-solid fa-chevron-down ml-1"></i>
                             </button>
                         </div>
@@ -330,7 +335,7 @@
                     <!-- Form now wraps everything to ensure submit button works -->
                     <form id="issue-form" onsubmit="event.preventDefault(); app.handlers.saveIssue();" class="bg-white rounded-lg shadow-sm border border-slate-200 relative">
                         <!-- Sticky Header with Buttons -->
-                        <div class="sticky top-0 z-40 bg-brand-50 px-4 py-3 border-b border-brand-100 flex justify-between items-center shadow-md rounded-t-lg">
+                        <div class="sticky top-0 z-30 bg-brand-50 px-4 py-3 border-b border-brand-100 flex justify-between items-center shadow-md rounded-t-lg">
                             <h2 class="text-lg font-bold text-brand-800" id="editor-title" data-i18n="addIssue">Add Issue</h2>
                             <div class="flex space-x-2">
                                 <button type="button" onclick="app.ui.switchWorkspaceTab('list')" class="px-3 py-1.5 bg-white border border-slate-300 rounded-md text-slate-700 hover:bg-slate-50 text-sm font-medium" data-i18n="cancel">Cancel</button>
@@ -497,24 +502,24 @@
                                             <span data-i18n="colTarget">Target</span>/<span data-i18n="colProject">Prj</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-target"></i>
                                         </th>
                                         <th class="px-1 py-3 text-center font-medium text-slate-500 uppercase sortable" data-col="warningDays" onclick="app.handlers.sortClients('warningDays')">
-                                            <span>Days</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-warningDays"></i>
+                                            <span data-i18n="colDaysShort">Days</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-warningDays"></i>
                                         </th>
                                         <th class="px-1 py-3 text-center font-bold text-red-500 uppercase sortable" data-col="overdue" onclick="app.handlers.sortClients('overdue')">
-                                            <span>OD</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-overdue"></i>
+                                            <span data-i18n="colOD">OD</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-overdue"></i>
                                         </th>
                                         <th class="px-1 py-3 text-center font-bold text-yellow-600 uppercase sortable" data-col="upcoming" onclick="app.handlers.sortClients('upcoming')">
-                                            <span>Upc</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-upcoming"></i>
+                                            <span data-i18n="colUpc">Upc</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-upcoming"></i>
                                         </th>
                                         <th class="px-1 py-3 text-center font-medium text-slate-500 uppercase sortable" data-col="total" onclick="app.handlers.sortClients('total')">
-                                            <span>Tot</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-total"></i>
+                                            <span data-i18n="colTot">Tot</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-total"></i>
                                         </th>
                                         <th class="px-1 py-3 text-center font-medium text-green-600 uppercase sortable" data-col="done" onclick="app.handlers.sortClients('done')">
-                                            <span>Ok</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-done"></i>
+                                            <span data-i18n="colDoneShort">Ok</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-done"></i>
                                         </th>
                                         <th class="px-1 py-3 text-center font-medium text-blue-600 uppercase sortable" data-col="rate" onclick="app.handlers.sortClients('rate')">
-                                            <span>%</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-rate"></i>
+                                            <span data-i18n="colRateShort">%</span> <i class="fa-solid fa-sort sort-icon" id="sort-icon-rate"></i>
                                         </th>
-                                        <th class="px-1 py-3 text-right font-medium text-slate-500 uppercase">Act</th>
+                                        <th class="px-1 py-3 text-right font-medium text-slate-500 uppercase" data-i18n="colActShort">Act</th>
                                     </tr>
                                 </thead>
                                 <tbody id="client-list-tbody" class="bg-white divide-y divide-slate-200"></tbody>
@@ -571,7 +576,7 @@
     </main>
 
     <!-- Modals -->
-    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/50 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="modal-overlay" class="fixed inset-0 bg-slate-900/50 z-[70] hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-lg shadow-xl max-w-sm w-full transform transition-all scale-100 p-6">
             <h3 id="modal-title" class="text-lg font-bold text-slate-800 mb-2">Prompt</h3>
             <p id="modal-message" class="text-slate-600 mb-4 text-sm leading-relaxed"></p>
@@ -583,12 +588,12 @@
         </div>
     </div>
 
-    <div id="image-modal" class="fixed inset-0 bg-black/90 z-50 hidden flex items-center justify-center p-2" onclick="this.classList.add('hidden')">
+    <div id="image-modal" class="fixed inset-0 bg-black/90 z-[80] hidden flex items-center justify-center p-2" onclick="this.classList.add('hidden')">
         <img id="image-modal-src" src="" class="max-w-full max-h-full rounded shadow-2xl object-contain">
         <button class="absolute top-4 right-4 text-white bg-white/20 rounded-full w-10 h-10 flex items-center justify-center hover:bg-white/40"><i class="fa-solid fa-times"></i></button>
     </div>
 
-    <div id="detail-modal" class="fixed inset-0 bg-slate-900/50 z-40 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <div id="detail-modal" class="fixed inset-0 bg-slate-900/50 z-[60] hidden flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-lg shadow-2xl w-full max-w-2xl max-h-[90vh] flex flex-col">
             <div class="flex justify-between items-center p-4 border-b border-slate-100 bg-slate-50 rounded-t-lg">
                 <h3 class="text-lg font-bold text-slate-800"><i class="fa-solid fa-circle-info mr-2 text-brand-600"></i><span data-i18n="issueDetail">Issue Detail</span></h3>
@@ -609,7 +614,7 @@
                 lastView: 'landing', 
                 lang: 'zh', 
                 calDate: new Date(), 
-                calMode: 'month', // Default to month for better view
+                calMode: 'biweek', // Default to 3 Weeks to match UI button
                 selectedDate: new Date(), // Track selected date
                 clientSort: { column: 'target', order: 'asc' } 
             },
@@ -621,14 +626,16 @@
                     nameTooLongTarget: "Target name is too long (Limit: ~10 Chinese or 20 English chars)", nameTooLongProject: "Project name is too long (Limit: ~20 Chinese or 40 English chars)",
                     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
                     weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
-                    noEvents: "No events for this day"
+                    noEvents: "No events for this day",
+                    colDaysShort: "Days", colOD: "OD", colUpc: "Upc", colTot: "Tot", colDoneShort: "Ok", colRateShort: "%", colActShort: "Act"
                 },
                 zh: {
                     appTitle: "Issue Log Monitor", loginTitle: "專案登入", loginDesc: "請輸入專案對象並選擇專案", loginPlaceholder: "專案對象名稱", enterProject: "進入專案", loginFooter: "如需新增對象，請點擊上方設定圖示", exit: "離開", overdueTitle: "逾期警報", upcomingTitle: "即將到期警報", filters: "篩選條件", advanced: "進階", daysLabel: "天數", urgencyAll: "急迫性 (全部)", urgencyCritical: "極高", urgencyHigh: "高", urgencyMedium: "中", urgencyLow: "低", urgencyRef: "參考", statusIncomplete: "未完工", statusCompleted: "已完工", statusAll: "全部狀態", originator: "發起人", assignee: "指派人", all: "全部", sortBy: "排序", sortDue: "期限", sortUrgency: "急迫性", sortOriginator: "發起人", sortAssignee: "指派人", sortStatus: "狀態", addIssue: "新增議題", clientName: "專案對象", issueTitle: "議題名稱", summaryPlaceholder: "輸入摘要...", tagNamePlaceholder: "輸入名字或選擇...", startTime: "提出時間", dueTime: "完成時間", urgency: "急迫性", completed: "已完工", notes: "補充資訊", images: "補充圖片", upload: "上傳圖片", cancel: "取消", save: "儲存", historyTitle: "操作紀錄", tabList: "列表", tabAdd: "新增", tabHistory: "紀錄", systemSettings: "系統設定", clientMgmt: "專案對象維護", newClientPlaceholder: "對象", add: "新增", colName: "名稱", colOverdue: "逾期", colUpcoming: "即將到期", colTotal: "議題", colDone: "完工", colRate: "達成率", colAction: "操作", colWarningDays: "預警天數", quickDateSettings: "快速完成日設定", addButton: "新增按鈕", confirm: "確認", issueDetail: "議題詳情", edit: "修改", close: "關閉", editBtn: "修改", delBtn: "刪除", sysPrompt: "系統提示", overdueText: "{n} 個議題逾期未完工", upcomingText: "{n} 個議題即將到期", noHistory: "此對象尚無紀錄", noIssues: "無相關議題", saved: "儲存成功", clientNotFound: "找不到對象：「{n}」\n請確認名稱或至設定頁面新增。", clientAdded: "對象新增成功", renameTitle: "修改對象名稱", renameMsg: "請輸入新名稱", renameSuccess: "更名成功，共更新 {n} 筆議題", delTitle: "刪除確認", delMsg: "刪除對象 <b>{n}</b> 將一併刪除其所有資料。<br>請輸入對象名稱確認：", delSuccess: "已刪除對象 {n}", imgError: "圖片處理失敗", importSuccess: "資料匯入成功", importError: "格式錯誤", readError: "讀取失敗", itemsOverdue: "個議題逾期", pleaseSetStart: "請先設定提出時間", confirmCompleteTitle: "完工確認", confirmCompleteMsg: "您確定要將此議題標記為已完工嗎？", confirmDeleteIssueTitle: "刪除議題", confirmDeleteIssueMsg: "您確定要刪除此議題嗎？", issueDeleted: "議題已刪除", overdueTag: "已逾期", dateError: "完成時間不能早於提出時間。", logCreated: "新增議題", logModified: "修改議題", logStatusChange: "狀態變更", logDeleted: "刪除議題", fieldTitle: "議題名稱", fieldOriginator: "發起人", fieldStartTime: "提出時間", fieldDueTime: "完成時間", fieldAssignee: "指派人", fieldUrgency: "急迫性", fieldCompleted: "狀態", valNotesUpdated: "變更補充資訊", valImagesUpdated: "變更補充圖片", colTarget: "對象", colProject: "專案", targetPlaceholder: "對象", projectPlaceholder: "專案", targetLabel: "對象", projectLabel: "專案", renameTargetTitle: "修改對象", renameTargetMsg: "新對象名稱:", renameProjectTitle: "修改專案", renameProjectMsg: "新專案名稱:", editClientTitle: "修改專案對象", editTargetMsg: "對象名稱:", editProjectMsg: "專案名稱:", editDaysMsg: "預警天數:", sameNameError: "該組合已存在", tabMgmt: "管理", tabCalendar: "代辦行事曆", viewBiWeek: "三週", viewMonth: "月曆",
                     nameTooLongTarget: "對象名稱太長 (限制: ~10中文字或20英文字)", nameTooLongProject: "專案名稱太長 (限制: ~20中文字或40英文字)",
                     months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
                     weekdays: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
-                    noEvents: "此日無待辦事項"
+                    noEvents: "此日無待辦事項",
+                    colDaysShort: "天數", colOD: "逾期", colUpc: "近期", colTot: "總數", colDoneShort: "完成", colRateShort: "率", colActShort: "操作"
                 }
             },
             
@@ -905,20 +912,25 @@
                         if (i.originator) i.originator.split(',').forEach(p => originators.add(p.trim()));
                         if (i.assignee) i.assignee.split(',').forEach(p => assignees.add(p.trim()));
                     });
-                    const sortedO = Array.from(originators).sort((a,b)=>String(a).localeCompare(String(b)));
-                    const sortedA = Array.from(assignees).sort((a,b)=>String(a).localeCompare(String(b)));
+                    const sortedO = Array.from(originators).filter(x=>x).sort((a,b)=>String(a).localeCompare(String(b)));
+                    const sortedA = Array.from(assignees).filter(x=>x).sort((a,b)=>String(a).localeCompare(String(b)));
                     const pop = (id, list) => {
-                        const dl = document.getElementById(id); dl.innerHTML = '';
-                        list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; dl.appendChild(o);} });
+                        const dl = document.getElementById(id); 
+                        if(dl) {
+                            dl.innerHTML = '';
+                            list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; dl.appendChild(o);} });
+                        }
                     };
                     pop('list-originators', sortedO); pop('list-assignees', sortedA);
                     
                     const fillFilter = (id, list) => {
                         const el = document.getElementById(id);
-                        const old = el.value;
-                        el.innerHTML = `<option value="all">${app.t('all')}</option>`;
-                        list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; o.innerText=p; el.appendChild(o);} });
-                        if(Array.from(el.options).some(o=>o.value===old)) el.value=old;
+                        if(el) {
+                            const old = el.value;
+                            el.innerHTML = `<option value="all">${app.t('all')}</option>`;
+                            list.forEach(p => { if(p){ const o = document.createElement('option'); o.value=p; o.innerText=p; el.appendChild(o);} });
+                            if(Array.from(el.options).some(o=>o.value===old)) el.value=old;
+                        }
                     };
                     fillFilter('filter-originator', sortedO);
                     fillFilter('filter-assignee', sortedA);
@@ -934,6 +946,31 @@
                     const warningDays = clientConfig ? (clientConfig.warningDays || 3) : 3;
                     
                     let res = app.data.issues.filter(i => i.client === app.state.currentClient);
+                    
+                    // Calc rate before filters
+                    const total = res.length;
+                    const completed = res.filter(i => i.completed).length;
+                    const rate = total > 0 ? Math.round((completed / total) * 100) : 0;
+                    
+                    const rateEl = document.getElementById('current-completion-rate');
+                    const rateBadge = document.getElementById('completion-rate-badge');
+                    
+                    if(rateEl && rateBadge) {
+                        rateEl.innerText = `${rate}%`;
+                        
+                        // Reset base classes
+                        rateBadge.className = "flex items-center px-2 py-1 rounded border transition-colors";
+                        
+                        // Apply color logic consistent with client list
+                        if (rate >= 80) {
+                            rateBadge.classList.add('bg-green-50', 'text-green-700', 'border-green-100');
+                        } else if (rate >= 50) {
+                            rateBadge.classList.add('bg-yellow-50', 'text-yellow-700', 'border-yellow-100');
+                        } else {
+                            rateBadge.classList.add('bg-red-50', 'text-red-700', 'border-red-100');
+                        }
+                    }
+
                     const now = new Date();
                     const overdue = res.filter(i => i.dueTime && new Date(i.dueTime) < now && !i.completed);
                     
