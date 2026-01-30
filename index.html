@@ -120,6 +120,17 @@
         th.sortable.active .sort-icon {
             color: #4f46e5;
         }
+        
+        /* Mobile Specific Tweaks */
+        @media (max-width: 640px) {
+            .calendar-grid {
+                grid-template-columns: repeat(7, minmax(40px, 1fr));
+            }
+            .calendar-cell {
+                min-height: 60px;
+                font-size: 0.75rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-800 font-sans h-screen flex flex-col overflow-hidden">
@@ -416,17 +427,25 @@
                 <div id="config-content-mgmt">
                     <div class="bg-white rounded-lg shadow-sm border border-slate-200 p-5 mb-5">
                         <h2 class="text-lg font-bold text-slate-700 mb-4 border-b pb-2" data-i18n="clientMgmt">Target Management</h2>
-                        <div class="flex gap-2 mb-4">
-                            <button onclick="app.handlers.addClient()" class="bg-green-600 text-white px-4 py-2 rounded-md hover:bg-green-700 whitespace-nowrap order-first">
-                                <i class="fa-solid fa-plus"></i> <span data-i18n="add">Add</span>
-                            </button>
-                            <div class="flex-1 flex gap-2">
-                                <input type="text" id="new-target-name" class="flex-1 rounded-md border-slate-300 shadow-sm p-2 border" placeholder="Target" data-i18n-placeholder="targetPlaceholder">
-                                <input type="text" id="new-project-name" class="flex-1 rounded-md border-slate-300 shadow-sm p-2 border" placeholder="Project" data-i18n-placeholder="projectPlaceholder">
-                                <input type="number" id="new-warning-days" class="w-20 rounded-md border-slate-300 shadow-sm p-2 border text-center" placeholder="Days" value="3">
+                        <!-- Responsive Input Form -->
+                        <div class="flex flex-col md:flex-row gap-3 mb-6">
+                            <input type="text" id="new-target-name" class="w-full md:flex-1 rounded-md border-slate-300 shadow-sm p-3 border focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" placeholder="Target" data-i18n-placeholder="targetPlaceholder">
+                            <input type="text" id="new-project-name" class="w-full md:flex-1 rounded-md border-slate-300 shadow-sm p-3 border focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" placeholder="Project" data-i18n-placeholder="projectPlaceholder">
+                            <div class="flex gap-3">
+                                <input type="number" id="new-warning-days" class="flex-1 md:w-24 rounded-md border-slate-300 shadow-sm p-3 border text-center focus:ring-2 focus:ring-brand-200 focus:border-brand-500 outline-none" placeholder="Days" value="3" title="Warning Days">
+                                <button onclick="app.handlers.addClient()" class="flex-1 md:flex-none bg-green-600 text-white px-6 py-2 rounded-md hover:bg-green-700 font-medium shadow-sm whitespace-nowrap">
+                                    <i class="fa-solid fa-plus mr-1"></i> <span data-i18n="add">Add</span>
+                                </button>
                             </div>
                         </div>
-                        <div class="overflow-x-auto">
+
+                        <!-- Mobile List View (Cards) -->
+                        <div id="client-list-mobile" class="space-y-4 md:hidden">
+                            <!-- Cards injected via JS -->
+                        </div>
+
+                        <!-- Desktop List View (Table) -->
+                        <div class="hidden md:block overflow-x-auto rounded-lg border border-slate-200">
                             <table class="min-w-full divide-y divide-slate-200">
                                 <thead class="bg-slate-50">
                                     <tr>
@@ -459,6 +478,17 @@
                                 </thead>
                                 <tbody id="client-list-tbody" class="bg-white divide-y divide-slate-200"></tbody>
                             </table>
+                        </div>
+                        
+                        <!-- Mobile Sort Selector -->
+                        <div class="md:hidden mt-4 flex items-center justify-end">
+                            <label class="text-xs text-slate-500 mr-2"><i class="fa-solid fa-sort mr-1"></i>Sort:</label>
+                            <select class="text-sm border-none bg-transparent font-medium text-brand-600 focus:ring-0" onchange="app.handlers.sortClients(this.value)">
+                                <option value="target">Target Name</option>
+                                <option value="project">Project Name</option>
+                                <option value="overdue">Overdue Count</option>
+                                <option value="rate">Completion Rate</option>
+                            </select>
                         </div>
                     </div>
 
@@ -1492,7 +1522,12 @@
                     c.appendChild(d);
                 },
                 renderClientList: function() {
-                    const tb = document.getElementById('client-list-tbody'); tb.innerHTML='';
+                    const tb = document.getElementById('client-list-tbody'); 
+                    const mobileContainer = document.getElementById('client-list-mobile');
+                    
+                    tb.innerHTML = '';
+                    mobileContainer.innerHTML = '';
+                    
                     if(!app.data.clients) return;
                     
                     // 1. Prepare data with statistics first
@@ -1546,7 +1581,7 @@
                         return a.target.localeCompare(b.target);
                     });
 
-                    // 3. Update Header Icons
+                    // 3. Update Header Icons (Desktop)
                     document.querySelectorAll('th.sortable').forEach(th => {
                         th.classList.remove('active', 'bg-slate-100');
                         const icon = th.querySelector('.sort-icon');
@@ -1560,12 +1595,12 @@
                         icon.className = order === 'asc' ? 'fa-solid fa-sort-up sort-icon' : 'fa-solid fa-sort-down sort-icon';
                     }
 
-                    // 4. Render Rows
+                    // 4. Render Rows (Desktop) & Cards (Mobile)
                     clientData.forEach(c => {
                         let rc = 'text-red-500'; if(c.stats.rate>=50) rc='text-yellow-500'; if(c.stats.rate>=80) rc='text-green-500';
-                        
                         const safeId = c.id.replace(/'/g, "\\'");
                         
+                        // Desktop Table Row
                         tb.innerHTML += `<tr>
                             <td class="px-4 py-3 text-sm font-medium text-slate-900">
                                 <div class="break-words whitespace-normal leading-tight">${c.target}</div>
@@ -1584,6 +1619,40 @@
                                 <button onclick="app.handlers.deleteClient('${safeId}')" class="text-red-600 text-sm hover:underline">${app.t('delBtn')}</button>
                             </td>
                         </tr>`;
+
+                        // Mobile Card
+                        mobileContainer.innerHTML += `
+                            <div class="bg-white p-4 rounded-lg shadow-sm border border-slate-200">
+                                <div class="flex justify-between items-start mb-3">
+                                    <div class="flex-1 mr-2">
+                                        <div class="font-bold text-slate-800 text-lg leading-tight mb-1">${c.target}</div>
+                                        <div class="text-xs text-slate-500 font-medium bg-slate-100 px-2 py-0.5 rounded inline-block">${c.project}</div>
+                                    </div>
+                                    <div class="flex space-x-3 text-sm">
+                                        <button onclick="app.handlers.editClientInfo('${safeId}')" class="text-blue-600"><i class="fa-solid fa-pen"></i></button>
+                                        <button onclick="app.handlers.deleteClient('${safeId}')" class="text-red-600"><i class="fa-solid fa-trash"></i></button>
+                                    </div>
+                                </div>
+                                <div class="grid grid-cols-3 gap-2 text-center bg-slate-50 p-2 rounded-lg border border-slate-100">
+                                    <div class="flex flex-col items-center">
+                                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">${app.t('colOverdue')}</span>
+                                        <span class="font-bold text-red-600 text-lg">${c.stats.od>0?c.stats.od:'-'}</span>
+                                    </div>
+                                    <div class="flex flex-col items-center border-l border-slate-200">
+                                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">${app.t('colUpcoming')}</span>
+                                        <span class="font-bold text-yellow-600 text-lg">${c.stats.upcoming>0?c.stats.upcoming:'-'}</span>
+                                    </div>
+                                    <div class="flex flex-col items-center border-l border-slate-200">
+                                        <span class="text-[10px] text-slate-400 uppercase tracking-wider">${app.t('colRate')}</span>
+                                        <span class="font-bold ${rc} text-lg">${c.stats.rate}%</span>
+                                    </div>
+                                </div>
+                                <div class="flex justify-between items-center mt-2 px-1">
+                                     <div class="text-xs text-slate-400"><span data-i18n="colWarningDays">Days</span>: ${c.warningDays}</div>
+                                     <div class="text-xs text-slate-400"><span data-i18n="colTotal">Total</span>: ${c.stats.all} <span class="mx-1">/</span> <span data-i18n="colDone">Done</span>: ${c.stats.comp}</div>
+                                </div>
+                            </div>
+                        `;
                     });
                 },
                 renderQuickButtons: function() {
