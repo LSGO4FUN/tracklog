@@ -190,19 +190,22 @@
             </div>
             
             <!-- Controls Toolbar (Moved below title for better accessibility on mobile) -->
-            <div class="flex items-center space-x-1 pb-1">
-                <button onclick="app.handlers.toggleLang()" class="text-xs font-bold text-brand-600 border border-brand-200 bg-brand-50 px-3 py-1.5 rounded hover:bg-brand-100 transition mr-2 shadow-sm" id="lang-btn">
+            <div class="flex items-center space-x-1 pb-1 overflow-x-auto no-scrollbar">
+                <button onclick="app.handlers.toggleLang()" class="text-xs font-bold text-brand-600 border border-brand-200 bg-brand-50 px-3 py-1.5 rounded hover:bg-brand-100 transition mr-2 shadow-sm whitespace-nowrap" id="lang-btn">
                     EN / 中
                 </button>
                 <div class="flex space-x-1 border-l border-slate-200 pl-2">
-                    <button onclick="app.router.go('config')" class="text-slate-500 hover:text-brand-600 p-2 rounded-full hover:bg-slate-50 transition" title="Settings">
-                        <i class="fa-solid fa-gear text-lg"></i>
+                    <button onclick="app.router.go('config')" class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition flex items-center gap-1" title="Settings">
+                        <i class="fa-solid fa-gear text-sm"></i>
+                        <span class="text-xs font-medium" data-i18n="btnSettings">Settings</span>
                     </button>
-                    <button onclick="app.handlers.exportData()" class="text-slate-500 hover:text-brand-600 p-2 rounded-full hover:bg-slate-50 transition" title="Export">
-                        <i class="fa-solid fa-file-export"></i>
+                    <button onclick="app.handlers.exportData()" class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition flex items-center gap-1" title="Export">
+                        <i class="fa-solid fa-file-export text-sm"></i>
+                        <span class="text-xs font-medium" data-i18n="btnExport">Export</span>
                     </button>
-                    <label class="text-slate-500 hover:text-brand-600 p-2 rounded-full hover:bg-slate-50 transition cursor-pointer" title="Import">
-                        <i class="fa-solid fa-file-import"></i>
+                    <label class="text-slate-500 hover:text-brand-600 px-2 py-1.5 rounded hover:bg-slate-50 transition cursor-pointer flex items-center gap-1" title="Import">
+                        <i class="fa-solid fa-file-import text-sm"></i>
+                        <span class="text-xs font-medium" data-i18n="btnImport">Import</span>
                         <input type="file" id="importFile" class="hidden" accept=".json" onchange="app.handlers.importData(this)">
                     </label>
                 </div>
@@ -366,8 +369,12 @@
                                 <div class="flex flex-wrap gap-2 mb-2 min-h-[1.5rem]" id="tags-originator-container"></div>
                                 <div class="flex gap-2">
                                     <button type="button" onclick="app.ui.tags.addFromInput('originator')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-300 hover:bg-slate-200"><i class="fa-solid fa-plus"></i></button>
-                                    <!-- Added min-w-0 to prevent flex blowout on mobile -->
-                                    <input type="text" id="input-originator" list="list-originators" class="flex-1 min-w-0 rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                    <div class="relative flex-1 min-w-0">
+                                        <input type="text" id="input-originator" list="list-originators" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 pr-8 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400">
+                                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                                        </div>
+                                    </div>
                                 </div>
                                 <datalist id="list-originators"></datalist>
                             </div>
@@ -387,8 +394,12 @@
                                 <div class="flex flex-wrap gap-2 mb-2 min-h-[1.5rem]" id="tags-assignee-container"></div>
                                 <div class="flex gap-2">
                                     <button type="button" onclick="app.ui.tags.addFromInput('assignee')" class="px-3 py-2 bg-slate-100 text-slate-600 rounded border border-slate-300 hover:bg-slate-200"><i class="fa-solid fa-plus"></i></button>
-                                    <!-- Added min-w-0 to prevent flex blowout on mobile -->
-                                    <input type="text" id="input-assignee" list="list-assignees" class="flex-1 min-w-0 rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                    <div class="relative flex-1 min-w-0">
+                                        <input type="text" id="input-assignee" list="list-assignees" class="w-full rounded-md border-slate-300 shadow-sm focus:border-brand-500 focus:ring-brand-500 p-2 pr-8 border" placeholder="Type or select name" data-i18n-placeholder="tagNamePlaceholder">
+                                        <div class="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none text-slate-400">
+                                            <i class="fa-solid fa-chevron-down text-xs"></i>
+                                        </div>
+                                    </div>
                                 </div>
                                 <datalist id="list-assignees"></datalist>
                             </div>
@@ -635,7 +646,8 @@
                     months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
                     weekdays: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"],
                     noEvents: "No events for this day",
-                    colDaysShort: "Days", colOD: "OD", colUpc: "Upc", colTot: "Tot", colDoneShort: "Ok", colRateShort: "%", colActShort: "Act"
+                    colDaysShort: "Days", colOD: "OD", colUpc: "Upc", colTot: "Tot", colDoneShort: "Ok", colRateShort: "%", colActShort: "Act",
+                    btnSettings: "Settings", btnExport: "Export", btnImport: "Import"
                 },
                 zh: {
                     appTitle: "Track Log Monitor", loginTitle: "專案登入", loginDesc: "請輸入專案對象並選擇專案", loginPlaceholder: "專案對象名稱", enterProject: "進入專案", loginFooter: "如需新增對象，請點擊上方設定圖示", exit: "離開", overdueTitle: "逾期警報", upcomingTitle: "即將到期警報", filters: "篩選條件", advanced: "進階", daysLabel: "天數", urgencyAll: "急迫性 (全部)", urgencyCritical: "極高", urgencyHigh: "高", urgencyMedium: "中", urgencyLow: "低", urgencyRef: "參考", statusIncomplete: "未完工", statusCompleted: "已完工", statusAll: "全部狀態", originator: "發起人", assignee: "指派人", all: "全部", sortBy: "排序", sortDue: "期限", sortUrgency: "急迫性", sortOriginator: "發起人", sortAssignee: "指派人", sortStatus: "狀態", addIssue: "新增議題", clientName: "專案對象", issueTitle: "議題名稱", summaryPlaceholder: "輸入摘要...", tagNamePlaceholder: "輸入名字或選擇...", startTime: "提出時間", dueTime: "完成時間", urgency: "急迫性", completed: "已完工", notes: "補充資訊", images: "補充圖片", upload: "上傳圖片", cancel: "取消", save: "儲存", historyTitle: "操作紀錄", tabList: "列表", tabAdd: "新增", tabHistory: "紀錄", systemSettings: "系統設定", clientMgmt: "專案對象維護", newClientPlaceholder: "對象", add: "新增", colName: "名稱", colOverdue: "逾期", colUpcoming: "即將到期", colTotal: "議題", colDone: "完工", colRate: "達成率", colAction: "操作", colWarningDays: "預警天數", quickDateSettings: "快速完成日設定", addButton: "新增按鈕", confirm: "確認", issueDetail: "議題詳情", edit: "修改", close: "關閉", editBtn: "修改", delBtn: "刪除", sysPrompt: "系統提示", overdueText: "{n} 個議題逾期未完工", upcomingText: "{n} 個議題即將到期", noHistory: "此對象尚無紀錄", noIssues: "無相關議題", saved: "儲存成功", clientNotFound: "找不到對象：「{n}」\n請確認名稱或至設定頁面新增。", clientAdded: "對象新增成功", renameTitle: "修改對象名稱", renameMsg: "請輸入新名稱", renameSuccess: "更名成功，共更新 {n} 筆議題", delTitle: "刪除確認", delMsg: "刪除對象 <b>{n}</b> 將一併刪除其所有資料。<br>請輸入對象名稱確認：", delSuccess: "已刪除對象 {n}", imgError: "圖片處理失敗", importSuccess: "資料匯入成功", importError: "格式錯誤", readError: "讀取失敗", itemsOverdue: "個議題逾期", pleaseSetStart: "請先設定提出時間", confirmCompleteTitle: "完工確認", confirmCompleteMsg: "您確定要將此議題標記為已完工嗎？", confirmDeleteIssueTitle: "刪除議題", confirmDeleteIssueMsg: "您確定要刪除此議題嗎？", issueDeleted: "議題已刪除", overdueTag: "已逾期", dateError: "完成時間不能早於提出時間。", logCreated: "新增議題", logModified: "修改議題", logStatusChange: "狀態變更", logDeleted: "刪除議題", fieldTitle: "議題名稱", fieldOriginator: "發起人", fieldStartTime: "提出時間", fieldDueTime: "完成時間", fieldAssignee: "指派人", fieldUrgency: "急迫性", fieldCompleted: "狀態", valNotesUpdated: "變更補充資訊", valImagesUpdated: "變更補充圖片", colTarget: "對象", colProject: "專案", targetPlaceholder: "對象", projectPlaceholder: "專案", targetLabel: "對象", projectLabel: "專案", renameTargetTitle: "修改對象", renameTargetMsg: "新對象名稱:", renameProjectTitle: "修改專案", renameProjectMsg: "新專案名稱:", editClientTitle: "修改專案對象", editTargetMsg: "對象名稱:", editProjectMsg: "專案名稱:", editDaysMsg: "預警天數:", sameNameError: "該組合已存在", tabMgmt: "管理", tabCalendar: "代辦行事曆", viewBiWeek: "三週", viewMonth: "月曆",
@@ -643,7 +655,8 @@
                     months: ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"],
                     weekdays: ["週日", "週一", "週二", "週三", "週四", "週五", "週六"],
                     noEvents: "此日無待辦事項",
-                    colDaysShort: "天數", colOD: "逾期", colUpc: "近期", colTot: "總數", colDoneShort: "完成", colRateShort: "率", colActShort: "操作"
+                    colDaysShort: "天數", colOD: "逾期", colUpc: "近期", colTot: "總數", colDoneShort: "完成", colRateShort: "率", colActShort: "操作",
+                    btnSettings: "設定", btnExport: "匯出", btnImport: "匯入"
                 }
             },
             
